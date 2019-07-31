@@ -62,5 +62,5 @@ void loop()
   }
 
   irrecv.enableIRIn();
-  delay(200);
+  delay(100);
 }
