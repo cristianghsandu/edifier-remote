@@ -1,4 +1,5 @@
 #include <IRremote.h>
+#include <ESP32_IR_Remote.h>
 
 TaskHandle_t senderTask;
 TaskHandle_t receiverTask;
@@ -6,15 +7,18 @@ TaskHandle_t receiverTask;
 xQueueHandle sendQueue;
 
 const int RECV_PIN = 2;
+const int SEND_PIN = 26;
 
 const unsigned long LG_VOL_UP = 0xEF00FF;
 const unsigned long LG_VOL_DOWN = 0xEF807F;
 const unsigned long LG_MUTE = 0xEF6897;
 
+// IRremote only supports receiving on the ESP32
 IRrecv irrecv(RECV_PIN);
-IRsend irsend; // PWM pin 3
+ESP32_IRrecv irsend;
 
-enum edi_codes_t {
+enum edi_codes_t
+{
   VOL_UP,
   VOL_DOWN,
   MUTE,
@@ -22,9 +26,9 @@ enum edi_codes_t {
 };
 
 // TODO: use NEC instead of RAW pls
-const unsigned int EDI_VOL_UP_RAW[] = {8917, 4480, 555, 533, 555, 555, 555, 555, 555, 555, 555, 1643, 555, 555, 555, 533, 555, 555, 555, 1643, 555, 1643, 555, 1643, 555, 555, 533, 555, 555, 1643, 555, 1643, 555, 1643, 555, 555, 555, 1643, 555, 1643, 555, 555, 555, 555, 555, 555, 555, 555, 555, 555, 555, 1643, 555, 555, 533, 555, 555, 1643, 555, 1643, 555, 1643, 555, 1643, 555, 1643, 555, 41899, 8917, 2240, 555, 96491, 8896, 2261, 512}; //AnalysIR Batch Export (IRremote) - RAW
-const unsigned int EDI_VOL_DOWN_RAW[] = {8853, 4523, 512, 576, 491, 619, 469, 619, 469, 619, 469, 1707, 512, 597, 469, 619, 469, 619, 469, 1707, 512, 1685, 512, 1685, 512, 597, 469, 619, 469, 1707, 512, 1685, 512, 1685, 512, 1685, 512, 1685, 512, 1685, 512, 597, 469, 619, 469, 619, 469, 1707, 512, 597, 469, 619, 469, 619, 469, 619, 469, 1707, 512, 1685, 512, 1685, 512, 597, 469, 1685, 533, 41877, 8875, 2283, 512};                       //AnalysIR Batch Export (IRremote) - RAW
-const unsigned int EDI_MUTE_RAW[] = {8875, 4523, 512, 576, 512, 576, 512, 576, 512, 576, 512, 1707, 512, 576, 491, 597, 491, 597, 491, 1685, 533, 1685, 533, 1685, 533, 576, 491, 597, 491, 1685, 533, 1685, 512, 1685, 533, 1685, 533, 576, 491, 597, 491, 597, 491, 597, 491, 597, 491, 1707, 512, 576, 491, 597, 491, 1685, 533, 1685, 512, 1664, 533, 1685, 512, 1685, 512, 576, 512, 1685, 533, 41856, 8875, 2283, 512};                           //AnalysIR Batch Export (IRremote) - RAW
+int EDI_VOL_UP_RAW[] = {8875, -4523, 533, -576, 491, -597, 491, -597, 491, -597, 491, -1685, 533, -576, 491, -597, 491, -597, 491, -1707, 512, -1664, 533, -1685, 533, -576, 491, -597, 491, -1685, 533, -1685, 533, -1685, 533, -576, 491, -1685, 533, -1685, 533, -576, 491, -597, 491, -597, 491, -597, 491, -597, 491, -1685, 533, -576, 491, -597, 491, -1685, 533, -1685, 533, -1685, 533, -1685, 533, -1685, 533, -41941, 8875, -2304, 512, 0};
+int EDI_VOL_DOWN_RAW[] = {597, -1792, 3115, -8619, 363, -3221, 149, -8896, 4501, -533, 555, -533, 555, -533, 555, -533, 555, -533, 1643, -555, 555, -533, 555, -533, 555, -533, 1664, -533, 1643, -555, 1643, -576, 533, -555, 555, -555, 1643, -576, 1643, -576, 1643, -576, 1643, -576, 1643, -555, 1643, -576, 533, -555, 533, -555, 555, -555, 1643, -576, 533, -555, 533, -555, 533, -555, 533, -555, 1643, -576, 1643, -576, 1643, -576, 533, -555, 1643, -576, 41835, -8875, 2283, 0};
+int EDI_MUTE_RAW[] = {8896, -4480, 555, -555, 533, -555, 533, -555, 533, -555, 533, -1643, 555, -555, 533, -555, 533, -555, 533, -1643, 555, -1643, 555, -1643, 555, -555, 533, -555, 533, -1643, 555, -1643, 555, -1664, 533, -1643, 555, -555, 533, -555, 533, -555, 533, -555, 533, -555, 533, -1643, 555, -555, 533, -555, 533, -1643, 555, -1643, 555, -1643, 555, -1664, 533, -1664, 533, -555, 533, -1643, 555, -41835, 8917, -2240, 555, -96405, 8896, -2240, 555, 0};
 
 // TODO: does not seem to do what I want it to(speed up volume control)
 const unsigned int SIGNAL_REPEAT = 1;
@@ -87,13 +91,13 @@ void sendTaskFunc(void *params)
       switch (codeToSend)
       {
       case VOL_DOWN:
-        irsend.sendRaw(EDI_VOL_DOWN_RAW, sizeof(EDI_VOL_DOWN_RAW) / sizeof(EDI_VOL_DOWN_RAW[0]), 38);
+        irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_VOL_DOWN_RAW) / sizeof(EDI_VOL_DOWN_RAW[0]) - 1);
         break;
       case VOL_UP:
-        irsend.sendRaw(EDI_VOL_UP_RAW, sizeof(EDI_VOL_UP_RAW) / sizeof(EDI_VOL_UP_RAW[0]), 38);
+        irsend.sendIR(EDI_VOL_UP_RAW, sizeof(EDI_VOL_UP_RAW) / sizeof(EDI_VOL_UP_RAW[0]) - 1);
         break;
       case MUTE:
-        irsend.sendRaw(EDI_VOL_DOWN_RAW, sizeof(EDI_MUTE_RAW) / sizeof(EDI_MUTE_RAW[0]), 38);
+        irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_MUTE_RAW) / sizeof(EDI_MUTE_RAW[0]) - 1);
         break;
       case NONE:
       default:
@@ -116,6 +120,9 @@ void setup()
   Serial.println("Enabling IRin");
   irrecv.enableIRIn(); // Start the receiver
   Serial.println("Enabled IRin");
+
+  irsend.ESP32_IRsendPIN(SEND_PIN, 0);
+  irsend.initSend();
 
   // A queue of max 5 elements
   sendQueue = xQueueCreate(5, sizeof(edi_codes_t));
