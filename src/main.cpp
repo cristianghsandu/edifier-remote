@@ -21,7 +21,7 @@ IRsend irsend; // PWM pin 3
 IRdecode necDecoder;
 
 // TODO: does not seem to do what I want it to(speed up volume control)
-const unsigned int SIGNAL_REPEAT = 4;
+const unsigned int SIGNAL_REPEAT = 10;
 
 void setup()
 {
@@ -42,27 +42,28 @@ void loop()
     // Serial.println(necDecoder.value, HEX);
     // Serial.println(Pnames(necDecoder.protocolNum));
 
+    irrecv.disableIRIn();
     switch (necDecoder.value)
     {
     case LG_VOL_DOWN:
-      irsend.send(NEC, EDI_VOL_DOWN, 0, 38);
+      irsend.send(NEC, EDI_VOL_DOWN, 32, 38);
       for (size_t i = 0; i < SIGNAL_REPEAT; i++)
       {
-        irsend.send(NEC, EDI_REPEAT, 0, 38);
+        irsend.send(NEC, EDI_REPEAT, 32, 38);
       }
       break;
     case LG_VOL_UP:
-      irsend.send(NEC, EDI_VOL_UP, 0, 38);
+      irsend.send(NEC, EDI_VOL_UP);
       for (size_t i = 0; i < SIGNAL_REPEAT; i++)
       {
-        irsend.send(NEC, EDI_REPEAT, 0, 38);
+        irsend.send(NEC, EDI_REPEAT, 0);
       }
       break;
     case LG_MUTE:
-      irsend.send(NEC, EDI_VOL_MUTE, 0, 38);
+      irsend.send(NEC, EDI_VOL_MUTE, 32, 38);
       for (size_t i = 0; i < SIGNAL_REPEAT; i++)
       {
-        irsend.send(NEC, EDI_REPEAT, 0, 38);
+        irsend.send(NEC, EDI_REPEAT, 32, 38);
       }
       break;
     default:
