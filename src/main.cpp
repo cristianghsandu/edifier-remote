@@ -7,8 +7,8 @@ TaskHandle_t receiverTask;
 
 xQueueHandle sendQueue;
 
-const int RECV_PIN = 12;
-const int SEND_PIN = 13;
+const int RECV_PIN = 13;
+const int SEND_PIN = 12;
 
 const unsigned long LG_VOL_UP = 0xEF00FF;
 const unsigned long LG_VOL_DOWN = 0xEF807F;
@@ -76,6 +76,7 @@ void recvTaskFunc(void *params)
       }
     }
 
+    irrecv.resume();
     delay(100);
   }
 }
