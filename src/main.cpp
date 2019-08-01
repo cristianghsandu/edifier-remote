@@ -44,8 +44,6 @@ void loop()
 
     // Serial.println(necDecoder.value, HEX);
     // Serial.println(Pnames(necDecoder.protocolNum));
-
-    irrecv.disableIRIn();
     delay(100);
     
     switch (necDecoder.value)
