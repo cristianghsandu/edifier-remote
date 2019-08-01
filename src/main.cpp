@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <IRremote.h>
 #include <ESP32_IR_Remote.h>
 
@@ -6,8 +7,8 @@ TaskHandle_t receiverTask;
 
 xQueueHandle sendQueue;
 
-const int RECV_PIN = 2;
-const int SEND_PIN = 26;
+const int RECV_PIN = 4;
+const int SEND_PIN = 3;
 
 const unsigned long LG_VOL_UP = 0xEF00FF;
 const unsigned long LG_VOL_DOWN = 0xEF807F;
