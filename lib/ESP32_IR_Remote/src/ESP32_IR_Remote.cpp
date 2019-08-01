@@ -50,6 +50,14 @@ extern "C"
 // Number of clock ticks that represent 10us.  10 us = 1/100th msec.
 #define TICK_10_US (80000000 / CLK_DIV / 100000)
 
+#define NEC_BITS 32
+#define NEC_HDR_MARK 9000
+#define NEC_HDR_SPACE 4500
+#define NEC_BIT_MARK 560
+#define NEC_ONE_SPACE 1690
+#define NEC_ZERO_SPACE 560
+#define NEC_RPT_SPACE 2250
+
 static RingbufHandle_t ringBuf;
 
 ESP32_IRrecv::ESP32_IRrecv()
@@ -144,7 +152,7 @@ void ESP32_IRrecv::initSend()
   rmt_driver_install(config.channel, 0, 0); //19     /*!< RMT interrupt number, select from soc.h */
 }
 
-void ESP32_IRrecv::sendIR(int* data, int IRlength)
+void ESP32_IRrecv::sendIR(int *data, int IRlength)
 {
   rmt_config_t config;
   config.channel = (rmt_channel_t)rmtport;
@@ -219,12 +227,146 @@ void ESP32_IRrecv::decodeRAW(rmt_item32_t *data, int numItems, int *datato)
   Serial.println();
 }
 
+bool ESP32_IRrecv::isInRange(rmt_item32_t item, int lowDuration, int highDuration, int tolerance)
+{
+  uint32_t lowValue = item.duration0 * 10 / TICK_10_US;
+  uint32_t highValue = item.duration1 * 10 / TICK_10_US;
+  /*
+  ESP_LOGI(TAG, "lowValue=%d, highValue=%d, lowDuration=%d, highDuration=%d",
+    lowValue, highValue, lowDuration, highDuration);
+  */
+  if (lowValue < (lowDuration - tolerance) || lowValue > (lowDuration + tolerance) ||
+      (highValue != 0 &&
+       (highValue < (highDuration - tolerance) || highValue > (highDuration + tolerance))))
+  {
+    return false;
+  }
+  return true;
+}
+
+bool ESP32_IRrecv::NEC_is0(rmt_item32_t item)
+{
+  return isInRange(item, NEC_BIT_MARK, NEC_BIT_MARK, 100);
+}
+
+bool ESP32_IRrecv::NEC_is1(rmt_item32_t item)
+{
+  return isInRange(item, NEC_BIT_MARK, NEC_ONE_SPACE, 100);
+}
+
+int ESP32_IRrecv::decodeNEC(rmt_item32_t *data, int numItems)
+{
+  if (!isInRange(data[0], NEC_HDR_MARK, NEC_HDR_SPACE, 200))
+  {
+    //ESP_LOGD(TAG, "Not an NEC");
+    return 0;
+  }
+
+  int i;
+  uint8_t address = 0, notAddress = 0, command = 0, notCommand = 0;
+  int accumCounter = 0;
+  uint8_t accumValue = 0;
+  for (i = 1; i < numItems; i++)
+  {
+    if (NEC_is0(data[i]))
+    {
+      //ESP_LOGD(TAG, "%d: 0", i);
+      accumValue = accumValue >> 1;
+    }
+    else if (NEC_is1(data[i]))
+    {
+      //ESP_LOGD(TAG, "%d: 1", i);
+      accumValue = (accumValue >> 1) | 0x80;
+    }
+    else
+    {
+      //ESP_LOGD(TAG, "Unknown");
+    }
+    if (accumCounter == 7)
+    {
+      accumCounter = 0;
+      //ESP_LOGD(TAG, "Byte: 0x%.2x", accumValue);
+      if (i == 8)
+      {
+        address = accumValue;
+      }
+      else if (i == 16)
+      {
+        notAddress = accumValue;
+      }
+      else if (i == 24)
+      {
+        command = accumValue;
+      }
+      else if (i == 32)
+      {
+        notCommand = accumValue;
+      }
+      accumValue = 0;
+    }
+    else
+    {
+      accumCounter++;
+    }
+  }
+  //ESP_LOGD(TAG, "Address: 0x%.2x, NotAddress: 0x%.2x", address, notAddress ^ 0xff);
+  if (address != (notAddress ^ 0xff) || command != (notCommand ^ 0xff))
+  {
+    // Data mis match
+    return 0;
+  }
+  // Serial.print("Address: ");
+  // Serial.print(address);
+  // Serial.print(" Command: ");
+  // Serial.println(command);
+
+  return command;
+}
+
+int ESP32_IRrecv::readNEC(int *data, int maxBuf)
+{
+  RingbufHandle_t rb = NULL;
+  rmt_config_t config;
+  config.channel = (rmt_channel_t)rmtport;
+
+  memset(data, 0, maxBuf);
+
+  rmt_get_ringbuf_handle(config.channel, &rb);
+  int count = maxBuf;
+  if (rb)
+  {
+    Serial.print("NEC IR Code :");
+    while (count)
+    {
+      size_t itemSize = 0;
+      rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
+      int numItems = itemSize / sizeof(rmt_item32_t);
+      if (numItems == 0)
+      {
+        return 0;
+      }
+
+      data[count] = decodeNEC(item, numItems);
+      Serial.print(data[count]);
+      vRingbufferReturnItem(ringBuf, (void *)item);
+
+      count--;
+    }
+    Serial.println();
+
+    return maxBuf - count;
+  }
+
+  vTaskDelete(NULL);
+  return 0;
+}
+
 int ESP32_IRrecv::readIR(int *data, int maxBuf)
 {
   RingbufHandle_t rb = NULL;
   rmt_config_t config;
   config.channel = (rmt_channel_t)rmtport;
-  int command = 0;
+
   rmt_get_ringbuf_handle(config.channel, &rb);
   while (rb)
   {
@@ -235,15 +377,17 @@ int ESP32_IRrecv::readIR(int *data, int maxBuf)
     {
       return 0;
     }
-    int i;
+
     Serial.print("Found num of Items :");
     Serial.println(numItems * 2 - 1);
     memset(data, 0, maxBuf);
+
     Serial.print("Raw IR Code :");
     decodeRAW(item, numItems, data);
     vRingbufferReturnItem(ringBuf, (void *)item);
     return (numItems * 2 - 1);
   }
+
   vTaskDelete(NULL);
   return 0;
 }

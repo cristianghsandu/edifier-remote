@@ -15,7 +15,7 @@ const unsigned long LG_VOL_DOWN = 0xEF807F;
 const unsigned long LG_MUTE = 0xEF6897;
 
 // IRremote only supports receiving on the ESP32
-IRrecv irrecv(RECV_PIN);
+ESP32_IRrecv irrecv;
 ESP32_IRrecv irsend;
 
 enum edi_codes_t
@@ -43,41 +43,42 @@ void recvTaskFunc(void *params)
   for (;;)
   {
     edi_codes_t codeToSend = NONE;
-    if (irrecv.decode(&results))
-    {
-      Serial.println(results.value, HEX);
-      Serial.println(results.decode_type);
+    int data[4];
 
-      switch (results.value)
-      {
-      case LG_VOL_DOWN:
-        for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-        {
-          codeToSend = VOL_DOWN;
-          xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-        }
-        break;
-      case LG_VOL_UP:
-        for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-        {
-          codeToSend = VOL_UP;
-          xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-        }
-        break;
-      case LG_MUTE:
-        for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-        {
-          codeToSend = MUTE;
-          xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-        }
-        break;
-      default:
-        break;
-      }
-    }
+    int count = irrecv.readNEC(&data[0], 4);
+    // if (count == 0)
+    // {
+    //   for (int i = 0; i < 4; i++) {
+    //     Serial.println(data[i], HEX);
+    //   }
 
-    irrecv.resume();
-    delay(100);
+    //   switch (count)
+    //   {
+    //   case LG_VOL_DOWN:
+    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+    //     {
+    //       codeToSend = VOL_DOWN;
+    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+    //     }
+    //     break;
+    //   case LG_VOL_UP:
+    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+    //     {
+    //       codeToSend = VOL_UP;
+    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+    //     }
+    //     break;
+    //   case LG_MUTE:
+    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+    //     {
+    //       codeToSend = MUTE;
+    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+    //     }
+    //     break;
+    //   default:
+    //     break;
+    //   }
+    // }
   }
 }
 
@@ -117,31 +118,31 @@ void loop()
 void setup()
 {
   Serial.begin(115200);
-  // In case the interrupt driver crashes on setup, give a clue
-  // to the user what's going on.
-  Serial.println("Enabling IRin");
-  irrecv.enableIRIn(); // Start the receiver
-  Serial.println("Enabled IRin");
 
   irsend.ESP32_IRsendPIN(SEND_PIN, 0);
   irsend.initSend();
 
+  irrecv.ESP32_IRrecvPIN(RECV_PIN, 1);
+  irrecv.initReceive();
+
   // A queue of max 5 elements
   sendQueue = xQueueCreate(5, sizeof(edi_codes_t));
 
-  xTaskCreate(
+  xTaskCreatePinnedToCore(
       recvTaskFunc,
       "recvTask",
       10000,
       NULL,
       1,
-      NULL);
+      NULL,
+      0);
 
-  xTaskCreate(
+  xTaskCreatePinnedToCore(
       sendTaskFunc,
       "sendTask",
       10000,
       NULL,
       1,
-      NULL);
+      NULL,
+      1);
 }

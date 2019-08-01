@@ -45,24 +45,32 @@ extern "C"
 
 class ESP32_IRrecv
 {
-  public:
-    ESP32_IRrecv();
-    void ESP32_IRrecvPIN(int recvpin);
-    void ESP32_IRsendPIN(int sendpin);
-    void ESP32_IRrecvPIN(int recvpin, int port);
-    void ESP32_IRsendPIN(int sendpin, int port);
-    void initReceive();
-    void initSend();
-    void stopIR();
-    int readIR(int *data, int maxBuf);
-    void sendIR(int *data, int IRlength);
+public:
+  ESP32_IRrecv();
+  void ESP32_IRrecvPIN(int recvpin);
+  void ESP32_IRsendPIN(int sendpin);
+  void ESP32_IRrecvPIN(int recvpin, int port);
+  void ESP32_IRsendPIN(int sendpin, int port);
+  void initReceive();
+  void initSend();
+  void stopIR();
+  int readIR(int *data, int maxBuf);
+  void sendIR(int *data, int IRlength);
+  // NEC
+  int readNEC(int *data, int maxBuf);
 
-  private:
-    int gpionum;
-    int rmtport;
-    void decodeRAW(rmt_item32_t *data, int numItems, int *datato);
-    void getDataIR(rmt_item32_t item, int *datato, int index);
-    void buildItem(rmt_item32_t &item, int high_us, int low_us);
+private:
+  int gpionum;
+  int rmtport;
+  void decodeRAW(rmt_item32_t *data, int numItems, int *datato);
+  void getDataIR(rmt_item32_t item, int *datato, int index);
+  void buildItem(rmt_item32_t &item, int high_us, int low_us);
+
+  // NEC
+  bool isInRange(rmt_item32_t item, int lowDuration, int highDuration, int tolerance);
+  bool NEC_is0(rmt_item32_t item);
+  bool NEC_is1(rmt_item32_t item);
+  int decodeNEC(rmt_item32_t *data, int numItems);
 };
 
 #endif /* ESP32_IR_REMOTE_H_ */
