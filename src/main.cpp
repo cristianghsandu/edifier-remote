@@ -48,29 +48,31 @@ void loop()
     // Serial.println(necDecoder.value, HEX);
     // Serial.println(Pnames(necDecoder.protocolNum));
 
-    switch (necDecoder.value)
-    {
-    case LG_VOL_DOWN:
-      code = EDI_VOL_DOWN;
-      break;
-    case LG_VOL_UP:
-      code = EDI_VOL_UP;
-      break;
-    case LG_MUTE:
-      code = EDI_VOL_MUTE;
-      break;
-    default:
-      break;
-    }
-
-    // Repeat
-    if (code == necDecoder.value && dt < 100)
+    // Repeat, this will not trigger
+    if (code == necDecoder.value && dt < 500)
     {
       irsend.send(NEC, EDI_REPEAT);
-    } else {
-      irsend.send(NEC, code);
     }
+    else
+    {
+      switch (necDecoder.value)
+      {
+      case LG_VOL_DOWN:
+        code = EDI_VOL_DOWN;
+        break;
+      case LG_VOL_UP:
+        code = EDI_VOL_UP;
+        break;
+      case LG_MUTE:
+        code = EDI_VOL_MUTE;
+        break;
+      default:
+        break;
+      }
 
+      irsend.send(NEC, code);
+      code = necDecoder.value;
+    }
   }
 
   irrecv.enableIRIn();
