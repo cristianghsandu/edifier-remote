@@ -23,6 +23,7 @@ IRdecode necDecoder;
 const unsigned int SIGNAL_REPEAT = 10;
 
 unsigned long time = 0;
+unsigned long dt = 0;
 uint32_t code = 0;
 
 void setup()
@@ -37,42 +38,40 @@ void setup()
 
 void loop()
 {
+  // Time since last recv
+  dt = millis() - time;
+  time = millis();
+  // Serial.println(dt);
+  // Repeat, this will not trigger
+  // if (dt < 500)
+  // {
+  //   irsend.send(NEC, EDI_REPEAT);
+  // }
+
   if (irrecv.getResults())
   {
-    // Time since last recv
-    unsigned long dt = millis() - time;
-    time = millis();
-
     necDecoder.decode();
 
     // Serial.println(necDecoder.value, HEX);
     // Serial.println(Pnames(necDecoder.protocolNum));
 
-    // Repeat, this will not trigger
-    if (code == necDecoder.value && dt < 500)
+    switch (necDecoder.value)
     {
-      irsend.send(NEC, EDI_REPEAT);
+    case LG_VOL_DOWN:
+      code = EDI_VOL_DOWN;
+      break;
+    case LG_VOL_UP:
+      code = EDI_VOL_UP;
+      break;
+    case LG_MUTE:
+      code = EDI_VOL_MUTE;
+      break;
+    default:
+      break;
     }
-    else
-    {
-      switch (necDecoder.value)
-      {
-      case LG_VOL_DOWN:
-        code = EDI_VOL_DOWN;
-        break;
-      case LG_VOL_UP:
-        code = EDI_VOL_UP;
-        break;
-      case LG_MUTE:
-        code = EDI_VOL_MUTE;
-        break;
-      default:
-        break;
-      }
 
-      irsend.send(NEC, code);
-      code = necDecoder.value;
-    }
+    irsend.send(NEC, code);
+    code = necDecoder.value;
   }
 
   irrecv.enableIRIn();
