@@ -1,133 +1,32 @@
 #include <Arduino.h>
-#include <IRremote.h>
-#include <ESP32_IR_Remote.h>
-
-TaskHandle_t senderTask;
-TaskHandle_t receiverTask;
-
-xQueueHandle sendQueue;
+#include <RMTLib.h>
 
 const int RECV_PIN = 13;
 const int SEND_PIN = 12;
 
-const unsigned long LG_VOL_UP = 0xEF00FF;
-const unsigned long LG_VOL_DOWN = 0xEF807F;
-const unsigned long LG_MUTE = 0xEF6897;
+const uint32_t LG_VOL_UP = 0xEF00FF;
+const uint32_t LG_VOL_DOWN = 0xEF807F;
+const uint32_t LG_MUTE = 0xEF6897;
 
+const uint32_t EDI_VOL_UP = 0x08E7609F;
+const uint32_t EDI_VOL_DOWN = 0x08E7E21D;
+const uint32_t EDI_VOL_MUTE = 0x08E7827D;
+const uint32_t EDI_REPEAT = 0xFFFFFFFF;
 
+const int TX_PIN = 12;
+const int RX_PIN = 13;
 
-// TODO: does not seem to do what I want it to(speed up volume control)
-const unsigned int SIGNAL_REPEAT = 1;
+RMTLib rmt;
 
-decode_results results;
-
-void recvTaskFunc(void *params)
+void setup()
 {
-  const TickType_t ticksToWait = pdMS_TO_TICKS(100);
+  Serial.begin(1152200);
 
-  for (;;)
-  {
-    edi_codes_t codeToSend = NONE;
-    int data[4];
-
-    int count = irrecv.readNEC(&data[0], 4);
-    // if (count == 0)
-    // {
-    //   for (int i = 0; i < 4; i++) {
-    //     Serial.println(data[i], HEX);
-    //   }
-
-    //   switch (count)
-    //   {
-    //   case LG_VOL_DOWN:
-    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-    //     {
-    //       codeToSend = VOL_DOWN;
-    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-    //     }
-    //     break;
-    //   case LG_VOL_UP:
-    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-    //     {
-    //       codeToSend = VOL_UP;
-    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-    //     }
-    //     break;
-    //   case LG_MUTE:
-    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-    //     {
-    //       codeToSend = MUTE;
-    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-    //     }
-    //     break;
-    //   default:
-    //     break;
-    //   }
-    // }
-  }
-}
-
-void sendTaskFunc(void *params)
-{
-  const TickType_t ticksToWait = pdMS_TO_TICKS(100);
-
-  edi_codes_t codeToSend;
-  for (;;)
-  {
-    if (xQueueReceive(sendQueue, &codeToSend, ticksToWait) == pdPASS)
-    {
-      switch (codeToSend)
-      {
-      case VOL_DOWN:
-        irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_VOL_DOWN_RAW) / sizeof(EDI_VOL_DOWN_RAW[0]) - 1);
-        break;
-      case VOL_UP:
-        irsend.sendIR(EDI_VOL_UP_RAW, sizeof(EDI_VOL_UP_RAW) / sizeof(EDI_VOL_UP_RAW[0]) - 1);
-        break;
-      case MUTE:
-        irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_MUTE_RAW) / sizeof(EDI_MUTE_RAW[0]) - 1);
-        break;
-      case NONE:
-      default:
-        break;
-      }
-    }
-  }
+  rmt.setTxPin(TX_PIN);
+  rmt.setRxPin(RX_PIN);
 }
 
 void loop()
 {
-  // Nada
-}
-
-void setup()
-{
-  Serial.begin(115200);
-
-  irsend.ESP32_IRsendPIN(SEND_PIN, 0);
-  irsend.initSend();
-
-  irrecv.ESP32_IRrecvPIN(RECV_PIN, 1);
-  irrecv.initReceive();
-
-  // A queue of max 5 elements
-  sendQueue = xQueueCreate(5, sizeof(edi_codes_t));
-
-  xTaskCreatePinnedToCore(
-      recvTaskFunc,
-      "recvTask",
-      10000,
-      NULL,
-      1,
-      NULL,
-      0);
-
-  xTaskCreatePinnedToCore(
-      sendTaskFunc,
-      "sendTask",
-      10000,
-      NULL,
-      1,
-      NULL,
-      1);
+  rmt.decodeNEC();
 }
