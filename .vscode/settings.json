@@ -4,7 +4,7 @@
         "PLATFORMIO_CALLER": "vscode"
     },
     "terminal.integrated.env.linux": {
-        "PATH": "/home/cristian/.platformio/penv/bin:/home/cristian/.platformio/penv:/usr/local/cuda-10.1/bin:/usr/local/cuda-10.1/NsightCompute-2019.1:/opt/ros/melodic/bin:/home/cristian/.nvm/versions/node/v10.6.0/bin:/home/linuxbrew/.linuxbrew/bin:/home/cristian/.local/share/umake/bin:/home/cristian/.cargo/bin:/home/cristian/.cargo/bin:/home/cristian/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/cristian/.dotnet/tools:/usr/lib/jvm/java-11-oracle/bin:/usr/lib/jvm/java-11-oracle/db/bin:/home/linuxbrew/.linuxbrew/opt/go/libexec/bin:/home/cristian/.local/share/umake/bin:/home/linuxbrew/.linuxbrew/opt/fzf/bin",
+        "PATH": "/home/chris/.platformio/penv/bin:/home/chris/.platformio/penv:/home/chris/.local/bin:/usr/local/cuda-10.1/bin:/usr/local/cuda-10.1/NsightCompute-2019.1:/home/chris/.nvm/versions/node/v10.15.3/bin:/home/linuxbrew/.linuxbrew/bin:/home/chris/.local/share/umake/bin:/home/chris/.local/share/umake/bin:/home/chris/.cargo/bin:/home/chris/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin:/home/chris/go/bin:/usr/lib/go/bin:/home/chris/.fzf/bin",
         "PLATFORMIO_CALLER": "vscode"
     }
 }

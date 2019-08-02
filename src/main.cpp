@@ -22,7 +22,8 @@ IRdecode necDecoder;
 
 const unsigned int SIGNAL_REPEAT = 10;
 
-unsigned long time;
+unsigned long time = 0;
+uint32_t code = 0;
 
 void setup()
 {
@@ -38,28 +39,38 @@ void loop()
 {
   if (irrecv.getResults())
   {
+    // Time since last recv
+    unsigned long dt = millis() - time;
     time = millis();
 
     necDecoder.decode();
 
     // Serial.println(necDecoder.value, HEX);
     // Serial.println(Pnames(necDecoder.protocolNum));
-    delay(100);
-    
+
     switch (necDecoder.value)
     {
     case LG_VOL_DOWN:
-      irsend.send(NEC, EDI_VOL_DOWN);
+      code = EDI_VOL_DOWN;
       break;
     case LG_VOL_UP:
-      irsend.send(NEC, EDI_VOL_UP);
+      code = EDI_VOL_UP;
       break;
     case LG_MUTE:
-      irsend.send(NEC, EDI_VOL_MUTE);
+      code = EDI_VOL_MUTE;
       break;
     default:
       break;
     }
+
+    // Repeat
+    if (code == necDecoder.value && dt < 100)
+    {
+      irsend.send(NEC, EDI_REPEAT);
+    } else {
+      irsend.send(NEC, code);
+    }
+
   }
 
   irrecv.enableIRIn();
