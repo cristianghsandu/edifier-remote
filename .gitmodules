@@ -1,0 +1,3 @@
+[submodule "lib/ESP32_RMT_IRLib"]
+	path = lib/ESP32_RMT_IRLib
+	url = https://github.com/haxplore/ESP32_RMT_IRLib
