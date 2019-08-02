@@ -71,6 +71,9 @@ void loop()
     }
 
     irsend.send(NEC, code);
+    for (size_t i = 0; i < SIGNAL_REPEAT; i++) {
+      irsend.send(NEC, EDI_REPEAT);
+    }
     code = necDecoder.value;
   }
 
