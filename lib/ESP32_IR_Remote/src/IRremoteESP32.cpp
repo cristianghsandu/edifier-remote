@@ -1,25 +1,14 @@
-/* Copyright (c) 2018 Darryl Scott. All Rights Reserved.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 3.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>. *
- * 
- * Based on the Code from Neil Kolban: https://github.com/nkolban/esp32-snippets/blob/master/hardware/infra_red/receiver/rmt_receiver.c
- * Based on the Code from pcbreflux: https://github.com/pcbreflux/espressif/blob/master/esp32/arduino/sketchbook/ESP32_IR_Remote/ir_demo/ir_demo.ino
- * Based on the Code from Xplorer001: https://github.com/ExploreEmbedded/ESP32_RMT
- */
-/* This is a simple code to receive and then save IR received by an IR sensor connected to the ESP32 and then resend it back out via an IR LED  
- * Reason that I created this I could not find any complete examples of IR send and Received in the RAW format, I am hoping this code can then be used
- * to build on the existing IR libraries out there.
- */
+/*
+* Copyright (c) 2019 Cristian Sandu
+*
+* Based on https://github.com/Darryl-Scott/ESP32-RMT-Library-IR-code-RAW
+* Plus: https://github.com/espressif/esp-idf/blob/master/examples/peripherals/rmt_nec_tx_rx/main/infrared_nec_main.c
+* https://github.com/pcbreflux/espressif/blob/master/esp32/arduino/sketchbook/ESP32_IR_Remote/ir_demo/ESP32_IR_Remote.cpp
+* Also:
+* https://github.com/cyborg5/IRLib2
+*  
+* A small class to send and receive NEC IR codes with the RMT peripheral on an ESP32, could be pushed to IRremote(or IRlib2)
+*/
 
 #include "Arduino.h"
 #ifdef __cplusplus
@@ -37,7 +26,7 @@ extern "C"
 }
 #endif
 
-#include "ESP32_IR_Remote.h"
+#include "IRremoteESP32.h"
 
 #define roundTo 50                 //rounding microseconds timings
 #define MARK_EXCESS 220            //tweeked to get the right timing
@@ -78,7 +67,7 @@ IRremoteESP32::IRremoteESP32()
 {
 }
 
-void IRremoteESP32::ESP32_IRrecvPIN(int recvpin, int port)
+void IRremoteESP32::setRecvPin(int recvpin, int port)
 {
   if (recvpin >= GPIO_NUM_0 && recvpin < GPIO_NUM_MAX)
   {
@@ -98,17 +87,17 @@ void IRremoteESP32::ESP32_IRrecvPIN(int recvpin, int port)
   }
 }
 
-void IRremoteESP32::ESP32_IRrecvPIN(int recvpin)
+void IRremoteESP32::setRecvPin(int recvpin)
 {
-  ESP32_IRrecvPIN(recvpin, (int)RMT_CHANNEL_0);
+  setRecvPin(recvpin, (int)RMT_CHANNEL_0);
 }
 
-void IRremoteESP32::ESP32_IRsendPIN(int sendpin)
+void IRremoteESP32::setSendPin(int sendpin)
 {
-  ESP32_IRrecvPIN(sendpin, (int)RMT_CHANNEL_0);
+  setRecvPin(sendpin, (int)RMT_CHANNEL_0);
 }
 
-void IRremoteESP32::ESP32_IRsendPIN(int sendpin, int port)
+void IRremoteESP32::setSendPin(int sendpin, int port)
 {
 
   if (sendpin >= GPIO_NUM_0 && sendpin < GPIO_NUM_MAX)
@@ -166,7 +155,7 @@ void IRremoteESP32::initSend()
   rmt_driver_install(config.channel, 0, 0); //19     /*!< RMT interrupt number, select from soc.h */
 }
 
-void IRremoteESP32::sendIR(int *data, int IRlength)
+void IRremoteESP32::sendRAW(int *data, int IRlength)
 {
   rmt_config_t config;
   config.channel = (rmt_channel_t)rmtport;
@@ -184,7 +173,7 @@ void IRremoteESP32::sendIR(int *data, int IRlength)
     Serial.print(data[x + 1]);
     Serial.print(",");
     //    To build a series of waveforms.
-    buildItem(item[i], data[x], -1 * data[x + 1]);
+    buildItem(item + i, data[x], -1 * data[x + 1]);
     x = x + 2;
     i++;
   }
@@ -195,6 +184,47 @@ void IRremoteESP32::sendIR(int *data, int IRlength)
   rmt_wait_tx_done(config.channel, 1);
   //before we free the data, make sure sending is already done.
   free(item);
+}
+
+void IRremoteESP32::sendNEC(const uint32_t &data)
+{
+  rmt_config_t config;
+  config.channel = (rmt_channel_t)rmtport;
+
+  if (data == NEC_REPEAT_DATA)
+  {
+    // Send only the repeat header
+    //mark (564* 16); space(564*4); mark(564);space(572);delay(97);//actually 97572us
+    return;
+  }
+
+  // Alloc send buffer
+  size_t size = sizeof(rmt_item32_t) * NEC_DATA_ITEM_COUNT;
+  rmt_item32_t *items = (rmt_item32_t *)malloc(size);
+  memset((void *)items, 0, size);
+
+  // Fill items
+  size_t i = 0;
+  buildHeaderItem(items);
+  for (; i < NEC_DATA_ITEM_COUNT; i++)
+  {
+    if (data & (1 >> i))
+    {
+      buildOneItem(items + i);
+    }
+    else
+    {
+      buildZeroItem(items + 1);
+    }
+  }
+  buildEndItem(items + i);
+
+  // RMT send
+  rmt_write_items(config.channel, items, NEC_DATA_ITEM_COUNT, true);
+  // Wait for send to finish
+  rmt_wait_tx_done(config.channel, 1);
+  // Free memory when send is done
+  free(items);
 }
 
 void IRremoteESP32::stopIR()
@@ -208,37 +238,32 @@ void IRremoteESP32::stopIR()
   rmt_driver_uninstall(config.channel);
 }
 
-void IRremoteESP32::getDataIR(rmt_item32_t item, int *datato, int index)
+void IRremoteESP32::buildItem(rmt_item32_t *item, int high_us, int low_us)
 {
-  int lowValue = (item.duration0) * (10 / TICK_10_US) - SPACE_EXCESS;
-  lowValue = roundTo * round((float)lowValue / roundTo);
-  Serial.print(lowValue);
-  Serial.print(",");
-  datato[index] = -lowValue;
-  int highValue = (item.duration1) * (10 / TICK_10_US) + MARK_EXCESS;
-  highValue = roundTo * round((float)highValue / roundTo);
-  Serial.print(highValue);
-  Serial.print(",");
-  datato[index + 1] = highValue;
+  item->level0 = true;
+  item->duration0 = (high_us / 10 * TICK_10_US);
+  item->level1 = false;
+  item->duration1 = (low_us / 10 * TICK_10_US);
 }
 
-void IRremoteESP32::buildItem(rmt_item32_t &item, int high_us, int low_us)
+void IRremoteESP32::buildHeaderItem(rmt_item32_t *item)
 {
-  item.level0 = true;
-  item.duration0 = (high_us / 10 * TICK_10_US);
-  item.level1 = false;
-  item.duration1 = (low_us / 10 * TICK_10_US);
+  buildItem(item, NEC_HEADER_HIGH_US, NEC_HEADER_LOW_US);
 }
 
-void IRremoteESP32::decodeRAW(rmt_item32_t *data, int numItems, int *datato)
+void IRremoteESP32::buildOneItem(rmt_item32_t *item)
 {
-  int x = 0;
-  for (int i = 0; i < numItems; i++)
-  {
-    getDataIR(data[i], datato, x);
-    x = x + 2;
-  }
-  Serial.println();
+  buildItem(item, NEC_BIT_ONE_HIGH_US, NEC_BIT_ONE_LOW_US);
+}
+
+void IRremoteESP32::buildZeroItem(rmt_item32_t *item)
+{
+  buildItem(item, NEC_BIT_ZERO_HIGH_US, NEC_BIT_ZERO_HIGH_US);
+}
+
+void IRremoteESP32::buildEndItem(rmt_item32_t *item)
+{
+  buildItem(item, NEC_BIT_END, 0x7fff);
 }
 
 bool IRremoteESP32::NEC_checkRange(int duration_ticks, int expected_us)
@@ -281,8 +306,6 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   else if (itemCount == NEC_DATA_ITEM_COUNT)
   {
     // All bits 0
-    *data = 0;
-
     if (NEC_isHeader(item))
     {
       // Skip

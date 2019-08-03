@@ -1,6 +1,10 @@
+/*
+* Copyright 2019 Cristian Sandu
+* IR code translator
+*/
 #include <Arduino.h>
 #include <IRremote.h>
-#include <ESP32_IR_Remote.h>
+#include <IRremoteESP32.h>
 
 TaskHandle_t senderTask;
 TaskHandle_t receiverTask;
@@ -115,10 +119,10 @@ void setup()
 {
   Serial.begin(115200);
 
-  irsend.ESP32_IRsendPIN(SEND_PIN, 0);
+  irsend.setSendPin(SEND_PIN, 0);
   irsend.initSend();
 
-  irrecv.ESP32_IRrecvPIN(RECV_PIN, 1);
+  irrecv.setRecvPin(RECV_PIN, 1);
   irrecv.initReceive();
 
   // A queue of max 5 elements
