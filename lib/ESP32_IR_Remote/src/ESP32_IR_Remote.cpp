@@ -74,11 +74,11 @@ const uint32_t NEC_REPEAT_DATA = 0xFFFFFFFF;
 
 static RingbufHandle_t ringBuf;
 
-ESP32_IRrecv::ESP32_IRrecv()
+IRremoteESP32::IRremoteESP32()
 {
 }
 
-void ESP32_IRrecv::ESP32_IRrecvPIN(int recvpin, int port)
+void IRremoteESP32::ESP32_IRrecvPIN(int recvpin, int port)
 {
   if (recvpin >= GPIO_NUM_0 && recvpin < GPIO_NUM_MAX)
   {
@@ -98,17 +98,17 @@ void ESP32_IRrecv::ESP32_IRrecvPIN(int recvpin, int port)
   }
 }
 
-void ESP32_IRrecv::ESP32_IRrecvPIN(int recvpin)
+void IRremoteESP32::ESP32_IRrecvPIN(int recvpin)
 {
   ESP32_IRrecvPIN(recvpin, (int)RMT_CHANNEL_0);
 }
 
-void ESP32_IRrecv::ESP32_IRsendPIN(int sendpin)
+void IRremoteESP32::ESP32_IRsendPIN(int sendpin)
 {
   ESP32_IRrecvPIN(sendpin, (int)RMT_CHANNEL_0);
 }
 
-void ESP32_IRrecv::ESP32_IRsendPIN(int sendpin, int port)
+void IRremoteESP32::ESP32_IRsendPIN(int sendpin, int port)
 {
 
   if (sendpin >= GPIO_NUM_0 && sendpin < GPIO_NUM_MAX)
@@ -129,7 +129,7 @@ void ESP32_IRrecv::ESP32_IRsendPIN(int sendpin, int port)
   }
 }
 
-void ESP32_IRrecv::initReceive()
+void IRremoteESP32::initReceive()
 {
   rmt_config_t config;
   config.rmt_mode = RMT_MODE_RX;
@@ -147,7 +147,7 @@ void ESP32_IRrecv::initReceive()
   rmt_rx_start(config.channel, 1);
 }
 
-void ESP32_IRrecv::initSend()
+void IRremoteESP32::initSend()
 {
   rmt_config_t config;
   config.channel = (rmt_channel_t)rmtport;
@@ -166,7 +166,7 @@ void ESP32_IRrecv::initSend()
   rmt_driver_install(config.channel, 0, 0); //19     /*!< RMT interrupt number, select from soc.h */
 }
 
-void ESP32_IRrecv::sendIR(int *data, int IRlength)
+void IRremoteESP32::sendIR(int *data, int IRlength)
 {
   rmt_config_t config;
   config.channel = (rmt_channel_t)rmtport;
@@ -197,7 +197,7 @@ void ESP32_IRrecv::sendIR(int *data, int IRlength)
   free(item);
 }
 
-void ESP32_IRrecv::stopIR()
+void IRremoteESP32::stopIR()
 {
   rmt_config_t config;
   config.channel = (rmt_channel_t)rmtport;
@@ -208,7 +208,7 @@ void ESP32_IRrecv::stopIR()
   rmt_driver_uninstall(config.channel);
 }
 
-void ESP32_IRrecv::getDataIR(rmt_item32_t item, int *datato, int index)
+void IRremoteESP32::getDataIR(rmt_item32_t item, int *datato, int index)
 {
   int lowValue = (item.duration0) * (10 / TICK_10_US) - SPACE_EXCESS;
   lowValue = roundTo * round((float)lowValue / roundTo);
@@ -222,7 +222,7 @@ void ESP32_IRrecv::getDataIR(rmt_item32_t item, int *datato, int index)
   datato[index + 1] = highValue;
 }
 
-void ESP32_IRrecv::buildItem(rmt_item32_t &item, int high_us, int low_us)
+void IRremoteESP32::buildItem(rmt_item32_t &item, int high_us, int low_us)
 {
   item.level0 = true;
   item.duration0 = (high_us / 10 * TICK_10_US);
@@ -230,7 +230,7 @@ void ESP32_IRrecv::buildItem(rmt_item32_t &item, int high_us, int low_us)
   item.duration1 = (low_us / 10 * TICK_10_US);
 }
 
-void ESP32_IRrecv::decodeRAW(rmt_item32_t *data, int numItems, int *datato)
+void IRremoteESP32::decodeRAW(rmt_item32_t *data, int numItems, int *datato)
 {
   int x = 0;
   for (int i = 0; i < numItems; i++)
@@ -241,37 +241,37 @@ void ESP32_IRrecv::decodeRAW(rmt_item32_t *data, int numItems, int *datato)
   Serial.println();
 }
 
-bool ESP32_IRrecv::NEC_checkRange(int duration_ticks, int expected_us)
+bool IRremoteESP32::NEC_checkRange(int duration_ticks, int expected_us)
 {
   const auto duration_us = NEC_ITEM_DURATION(duration_ticks);
   return (duration_us >= (uint16_t)(expected_us * (1.0 - PERCENT_TOLERANCE / 100.0))) && (duration_us <= (uint16_t)(expected_us * (1.0 + PERCENT_TOLERANCE / 100.0)));
 }
 
-bool ESP32_IRrecv::NEC_is0(rmt_item32_t *item)
+bool IRremoteESP32::NEC_is0(rmt_item32_t *item)
 {
   return NEC_checkRange(item->duration0, NEC_BIT_ZERO_HIGH_US) && NEC_checkRange(item->duration1, NEC_BIT_ZERO_LOW_US);
 }
 
-bool ESP32_IRrecv::NEC_is1(rmt_item32_t *item)
+bool IRremoteESP32::NEC_is1(rmt_item32_t *item)
 {
   return NEC_checkRange(item->duration0, NEC_BIT_ONE_HIGH_US) && NEC_checkRange(item->duration1, NEC_BIT_ONE_LOW_US);
 }
 
-bool ESP32_IRrecv::NEC_isEnd(rmt_item32_t *item)
+bool IRremoteESP32::NEC_isEnd(rmt_item32_t *item)
 {
 }
 
-bool ESP32_IRrecv::NEC_isHeader(rmt_item32_t *item)
+bool IRremoteESP32::NEC_isHeader(rmt_item32_t *item)
 {
   return NEC_checkRange(item->duration0, NEC_HEADER_HIGH_US) && NEC_checkRange(item->duration1, NEC_HEADER_LOW_US);
 }
 
-bool ESP32_IRrecv::NEC_isRepeat(rmt_item32_t *item)
+bool IRremoteESP32::NEC_isRepeat(rmt_item32_t *item)
 {
   return NEC_checkRange(item->duration0, NEC_HEADER_HIGH_US) && NEC_checkRange(item->duration1, NEC_HEADER_REPEAT_LOW_US);
 }
 
-int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
+int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
 {
   if (itemCount == NEC_REPEAT_ITEM_COUNT)
   {
@@ -310,7 +310,7 @@ int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   }
 }
 
-int ESP32_IRrecv::readNEC(uint32_t *data)
+int IRremoteESP32::readNEC(uint32_t *data)
 {
   size_t itemSize = 0;
   rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(ringBuf, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);

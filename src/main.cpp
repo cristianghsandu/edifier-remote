@@ -19,8 +19,8 @@ const uint32_t EDI_VOL_DOWN = 0x8E7E21D;
 const uint32_t EDI_MUTE = 0x8E7827D;
 
 // IRremote only supports receiving on the ESP32
-ESP32_IRrecv irrecv;
-ESP32_IRrecv irsend;
+IRremoteESP32 irrecv;
+IRremoteESP32 irsend;
 
 enum edi_codes_t
 {

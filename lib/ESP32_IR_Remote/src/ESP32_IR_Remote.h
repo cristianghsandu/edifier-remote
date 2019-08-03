@@ -43,10 +43,10 @@ extern "C"
 }
 #endif
 
-class ESP32_IRrecv
+class IRremoteESP32
 {
 public:
-  ESP32_IRrecv();
+  IRremoteESP32();
   void ESP32_IRrecvPIN(int recvpin);
   void ESP32_IRsendPIN(int sendpin);
   void ESP32_IRrecvPIN(int recvpin, int port);
