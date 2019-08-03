@@ -32,10 +32,6 @@ enum edi_codes_t
 
 const unsigned int SIGNAL_REPEAT = 10;
 
-unsigned long time = 0;
-unsigned long dt = 0;
-uint32_t code = 0;
-
 void recvTaskFunc(void *params)
 {
   IRremoteESP32 irrecv;
