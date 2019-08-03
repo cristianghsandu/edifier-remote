@@ -39,6 +39,8 @@ extern "C"
 // Number of clock ticks that represent 10us.  10 us = 1/100th msec.
 #define TICK_10_US (80000000 / CLK_DIV / 100000)
 
+#define TOPBIT 0x80000000
+
 #define NEC_HEADER_HIGH_US 9000       // NEC protocol header: positive 9ms
 #define NEC_HEADER_LOW_US 4500        // NEC protocol header: negative 4.5m
 #define NEC_HEADER_REPEAT_LOW_US 2200 // NEC protocol header, repeat: negative 2.2ms
@@ -209,21 +211,19 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
   size_t i = 1;
   buildHeaderItem(items);
 
+  // TODO: should I smash the input data instead here?
   uint32_t dataToSend = data;
-  for (; i < NEC_DATA_ITEM_COUNT - 1; i++, dataToSend >>= 1)
+  for (; i < NEC_DATA_ITEM_COUNT - 1; i++, dataToSend <<= 1)
   {
-    if (dataToSend & 0x1)
+    if (dataToSend & TOPBIT)
     {
-      Serial.print(1);
       buildOneItem(items + i);
     }
     else
     {
-      Serial.print(0);
       buildZeroItem(items + i);
     }
   }
-  Serial.println();
   
   buildEndItem(items + i);
 

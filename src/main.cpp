@@ -14,9 +14,9 @@ xQueueHandle sendQueue;
 const int RECV_PIN = 13;
 const int SEND_PIN = 12;
 
-const unsigned long LG_VOL_UP = 0xEF00FF;
-const unsigned long LG_VOL_DOWN = 0xEF807F;
-const unsigned long LG_MUTE = 0xEF6897;
+const uint32_t LG_VOL_UP = 0xEF00FF;
+const uint32_t LG_VOL_DOWN = 0xEF807F;
+const uint32_t LG_MUTE = 0xEF6897;
 
 const uint32_t EDI_VOL_UP = 0x08E7609F;
 const uint32_t EDI_VOL_DOWN = 0x08E7E21D;
