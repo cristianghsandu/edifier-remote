@@ -21,8 +21,6 @@ const uint32_t EDI_VOL_UP = 0x08E7609F;
 const uint32_t EDI_VOL_DOWN = 0x08E7E21D;
 const uint32_t EDI_MUTE = 0x08E7827D;
 
-const uint32_t NEC_REPEAT = 0xFFFFFFFF;
-
 enum edi_codes_t
 {
   VOL_UP,
@@ -31,7 +29,7 @@ enum edi_codes_t
   NONE
 };
 
-const unsigned int SEND_REPEAT = 3;
+const unsigned int SEND_REPEAT = 1;
 
 void recvTaskFunc(void *params)
 {
@@ -105,12 +103,6 @@ void sendTaskFunc(void *params)
       default:
         *codeToSend = NONE;
         break;
-      }
-
-      if (*codeToSend != NONE) {
-        for (size_t i = 0; i < SEND_REPEAT; i++) {
-          irsend.sendNEC(NEC_REPEAT);
-        }
       }
     }
   }

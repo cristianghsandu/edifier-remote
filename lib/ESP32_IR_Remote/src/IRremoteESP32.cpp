@@ -188,12 +188,11 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
   if (data == NEC_REPEAT_DATA)
   {
     // Send only the repeat header
-    //mark (564* 16); space(564*4); mark(564);space(572);delay(97);//actually 97572us
     size_t size = sizeof(rmt_item32_t) * 2;
     rmt_item32_t *items = (rmt_item32_t *)malloc(size);
     memset((void *)items, 0, size);
 
-    buildItem(items, NEC_HEADER_HIGH_US, NEC_HEADER_LOW_US);
+    buildItem(items, NEC_HEADER_HIGH_US, NEC_HEADER_REPEAT_LOW_US);
     buildEndItem(items + 1);
 
     sendRMT(items);
@@ -223,10 +222,10 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
       buildZeroItem(items + i);
     }
   }
-  
+
   buildEndItem(items + i);
 
-  sendRMT(items) ;
+  sendRMT(items);
 }
 
 void IRremoteESP32::sendRMT(rmt_item32_t *items)
@@ -313,6 +312,16 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   if (itemCount == NEC_REPEAT_ITEM_COUNT)
   {
     *data = NEC_REPEAT_DATA;
+
+    for (size_t i = 0; i < NEC_REPEAT_ITEM_COUNT; i++)
+    {
+      Serial.print("HIGH: ");
+      Serial.print(NEC_ITEM_DURATION((item + i)->duration0));
+      Serial.print(" LOW: ");      
+      Serial.print(NEC_ITEM_DURATION((item + i)->duration1));
+      Serial.println();
+    }
+
     return NEC_REPEAT_ITEM_COUNT;
   }
   else if (itemCount == NEC_DATA_ITEM_COUNT)
