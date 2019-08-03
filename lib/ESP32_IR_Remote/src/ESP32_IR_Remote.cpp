@@ -255,65 +255,71 @@ bool ESP32_IRrecv::NEC_is0(rmt_item32_t *item)
   return NEC_checkRange(item->duration0, NEC_BIT_ZERO_HIGH_US, NEC_BIT_MARGIN) && NEC_checkRange(item->duration1, NEC_BIT_ZERO_LOW_US, NEC_BIT_MARGIN);
 }
 
-bool ESP32_IRrecv::NEC_is1(rmt_item32_t* item)
+bool ESP32_IRrecv::NEC_is1(rmt_item32_t *item)
 {
   return NEC_checkRange(item->duration0, NEC_BIT_ONE_HIGH_US, NEC_BIT_MARGIN) && NEC_checkRange(item->duration1, NEC_BIT_ONE_LOW_US, NEC_BIT_MARGIN);
 }
 
 int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, uint16_t *data)
 {
-  int w_len = item_num;
-  if (w_len < NEC_DATA_ITEM_NUM)
-  {
-    return -1;
+  for (size_t i = 0; i < item_num; i++, item++) {
+    Serial.print("LOW: ");
+    Serial.print(item->duration0);
+    Serial.print("HIGH: ");
+    Serial.print(item->duration1);
+    Serial.print("\n");
   }
-
-  int i = 0, j = 0;
-  // if (!NEC_isHeader(*item))
+  // int w_len = item_num;
+  // if (w_len < NEC_DATA_ITEM_NUM)
   // {
-  //   item++;
   //   return -1;
   // }
 
-  uint16_t addr_t = 0;
-  for (j = 0; j < 16; j++)
-  {
-    if (NEC_is1(item))
-    {
-      addr_t |= (1 << j);
-    }
-    else if (NEC_is0(item))
-    {
-      addr_t |= (0 << j);
-    }
-    else
-    {
-      return -1;
-    }
-    item++;
-    i++;
-  }
-  uint16_t data_t = 0;
-  for (j = 0; j < 16; j++)
-  {
-    if (NEC_is1(item))
-    {
-      data_t |= (1 << j);
-    }
-    else if (NEC_is0(item))
-    {
-      data_t |= (0 << j);
-    }
-    else
-    {
-      return -1;
-    }
-    item++;
-    i++;
-  }
-  *addr = addr_t;
-  *data = data_t;
-  return i;
+  // int i = 0, j = 0;
+  // // if (!NEC_isHeader(*item))
+  // // {
+  // //   item++;
+  // //   return -1;
+  // // }
+
+  // uint16_t addr_t = 0;
+  // for (j = 0; j < 16; j++)
+  //   if (NEC_is1(item))
+  //   {
+  //     addr_t |= (1 << j);
+  //   }
+  //   else if (NEC_is0(item))
+  //   {
+  //     addr_t |= (0 << j);
+  //   }
+  //   else
+  //   {
+  //     return -1;
+  //   }
+  //   item++;
+  //   i++;
+  // }
+  // uint16_t data_t = 0;
+  // for (j = 0; j < 16; j++)
+  // {
+  //   if (NEC_is1(item))
+  //   {
+  //     data_t |= (1 << j);
+  //   }
+  //   else if (NEC_is0(item))
+  //   {
+  //     data_t |= (0 << j);
+  //   }
+  //   else
+  //   {
+  //     return -1;
+  //   }
+  //   item++;
+  //   i++;
+  // }
+  // *addr = addr_t;
+  // *data = data_t;
+  // return i;
 }
 
 int ESP32_IRrecv::readNEC()
@@ -374,6 +380,5 @@ int ESP32_IRrecv::readIR(int *data, int maxBuf)
     return (numItems * 2 - 1);
   }
 
-  vTaskDelete(NULL);
   return 0;
 }

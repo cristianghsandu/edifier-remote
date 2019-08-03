@@ -67,6 +67,7 @@ private:
   void buildItem(rmt_item32_t &item, int high_us, int low_us);
 
   // NEC
+  void NEC_adjusDataIR(rmt_item32_t *item);
   bool NEC_checkRange(int duration_ticks, int target_us, int margin_us);
   bool NEC_is0(rmt_item32_t* item);
   bool NEC_is1(rmt_item32_t* item);
