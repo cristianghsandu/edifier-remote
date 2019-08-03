@@ -66,7 +66,6 @@ extern "C"
 #define RMT_TX_DATA_NUM 100                                   // NEC tx test data number
 #define rmt_item32_TIMEOUT_US 9500                            // RMT receiver timeout duration_us(us)
 
-
 // ------- IRLIB
 const unsigned int PERCENT_TOLERANCE = 25;
 const unsigned int NEC_REPEAT_ITEM_COUNT = 2;
@@ -263,8 +262,8 @@ bool ESP32_IRrecv::NEC_is1(rmt_item32_t *item)
   return NEC_checkRange(item->duration0, NEC_BIT_ONE_HIGH_US) && NEC_checkRange(item->duration1, NEC_BIT_ONE_LOW_US);
 }
 
-bool ESP32_IRrecv::NEC_isEnd(rmt_item32_t* item) {
-
+bool ESP32_IRrecv::NEC_isEnd(rmt_item32_t *item)
+{
 }
 
 bool ESP32_IRrecv::NEC_isHeader(rmt_item32_t *item)
@@ -279,20 +278,18 @@ bool ESP32_IRrecv::NEC_isRepeat(rmt_item32_t *item)
 
 int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
 {
+  Serial.println(itemCount);
   if (itemCount == NEC_REPEAT_ITEM_COUNT)
   {
     Serial.println("Repeat");
-    if (NEC_isRepeat(item))
-    {
-      *data = NEC_REPEAT_DATA;
-      return 0;
-    }
+    *data = NEC_REPEAT_DATA;
+    return 0;
   }
   else if (itemCount == NEC_DATA_ITEM_COUNT)
   {
     // All bits 0
     *data = 0;
-    
+
     if (NEC_isHeader(item))
     {
       Serial.println("Header");
@@ -301,9 +298,12 @@ int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
     // Skip last item which is the end marker
     for (size_t i = 1; i < itemCount - 1; i++)
     {
-      if (NEC_is1(item + i)) {
+      if (NEC_is1(item + i))
+      {
         (*data) = (*data << 1) | 1;
-      } else if (NEC_is0(item+i)) {
+      }
+      else if (NEC_is0(item + i))
+      {
         (*data) <<= 1;
       }
     }

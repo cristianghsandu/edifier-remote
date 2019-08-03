@@ -14,6 +14,10 @@ const unsigned long LG_VOL_UP = 0xEF00FF;
 const unsigned long LG_VOL_DOWN = 0xEF807F;
 const unsigned long LG_MUTE = 0xEF6897;
 
+const uint32_t EDI_VOL_UP = 0x8E7609F;
+const uint32_t EDI_VOL_DOWN = 0x8E7E21D;
+const uint32_t EDI_MUTE = 0x8E7827D;
+
 // IRremote only supports receiving on the ESP32
 ESP32_IRrecv irrecv;
 ESP32_IRrecv irsend;
@@ -25,11 +29,6 @@ enum edi_codes_t
   MUTE,
   NONE
 };
-
-// TODO: use NEC instead of RAW pls
-int EDI_VOL_UP_RAW[] = {8875, -4523, 533, -576, 491, -597, 491, -597, 491, -597, 491, -1685, 533, -576, 491, -597, 491, -597, 491, -1707, 512, -1664, 533, -1685, 533, -576, 491, -597, 491, -1685, 533, -1685, 533, -1685, 533, -576, 491, -1685, 533, -1685, 533, -576, 491, -597, 491, -597, 491, -597, 491, -597, 491, -1685, 533, -576, 491, -597, 491, -1685, 533, -1685, 533, -1685, 533, -1685, 533, -1685, 533, -41941, 8875, -2304, 512, 0};
-int EDI_VOL_DOWN_RAW[] = {597, -1792, 3115, -8619, 363, -3221, 149, -8896, 4501, -533, 555, -533, 555, -533, 555, -533, 555, -533, 1643, -555, 555, -533, 555, -533, 555, -533, 1664, -533, 1643, -555, 1643, -576, 533, -555, 555, -555, 1643, -576, 1643, -576, 1643, -576, 1643, -576, 1643, -555, 1643, -576, 533, -555, 533, -555, 555, -555, 1643, -576, 533, -555, 533, -555, 533, -555, 533, -555, 1643, -576, 1643, -576, 1643, -576, 533, -555, 1643, -576, 41835, -8875, 2283, 0};
-int EDI_MUTE_RAW[] = {8896, -4480, 555, -555, 533, -555, 533, -555, 533, -555, 533, -1643, 555, -555, 533, -555, 533, -555, 533, -1643, 555, -1643, 555, -1643, 555, -555, 533, -555, 533, -1643, 555, -1643, 555, -1664, 533, -1643, 555, -555, 533, -555, 533, -555, 533, -555, 533, -555, 533, -1643, 555, -555, 533, -555, 533, -1643, 555, -1643, 555, -1643, 555, -1664, 533, -1664, 533, -555, 533, -1643, 555, -41835, 8917, -2240, 555, -96405, 8896, -2240, 555, 0};
 
 // TODO: does not seem to do what I want it to(speed up volume control)
 const unsigned int SIGNAL_REPEAT = 1;
@@ -94,13 +93,13 @@ void sendTaskFunc(void *params)
       switch (codeToSend)
       {
       case VOL_DOWN:
-        irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_VOL_DOWN_RAW) / sizeof(EDI_VOL_DOWN_RAW[0]) - 1);
+        // irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_VOL_DOWN_RAW) / sizeof(EDI_VOL_DOWN_RAW[0]) - 1);
         break;
       case VOL_UP:
-        irsend.sendIR(EDI_VOL_UP_RAW, sizeof(EDI_VOL_UP_RAW) / sizeof(EDI_VOL_UP_RAW[0]) - 1);
+        // irsend.sendIR(EDI_VOL_UP_RAW, sizeof(EDI_VOL_UP_RAW) / sizeof(EDI_VOL_UP_RAW[0]) - 1);
         break;
       case MUTE:
-        irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_MUTE_RAW) / sizeof(EDI_MUTE_RAW[0]) - 1);
+        // irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_MUTE_RAW) / sizeof(EDI_MUTE_RAW[0]) - 1);
         break;
       case NONE:
       default:
