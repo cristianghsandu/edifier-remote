@@ -311,16 +311,6 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   if (itemCount == NEC_REPEAT_ITEM_COUNT)
   {
     *data = NEC_REPEAT_DATA;
-
-    for (size_t i = 0; i < NEC_REPEAT_ITEM_COUNT; i++)
-    {
-      Serial.print("HIGH: ");
-      Serial.print(NEC_ITEM_DURATION((item + i)->duration0));
-      Serial.print(" LOW: ");
-      Serial.print(NEC_ITEM_DURATION((item + i)->duration1));
-      Serial.println();
-    }
-
     return NEC_REPEAT_ITEM_COUNT;
   }
   else if (itemCount == NEC_DATA_ITEM_COUNT)
