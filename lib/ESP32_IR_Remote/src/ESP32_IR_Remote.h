@@ -73,7 +73,8 @@ private:
   bool NEC_is1(rmt_item32_t* item);
   bool NEC_isHeader(rmt_item32_t* item);
   bool NEC_isRepeat(rmt_item32_t* item);
-  int decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, uint16_t *data);
+  bool NEC_isEnd(rmt_item32_t* item);
+  int decodeNEC(rmt_item32_t *item, int item_num, uint32_t *data);
 };
 
 #endif /* ESP32_IR_REMOTE_H_ */

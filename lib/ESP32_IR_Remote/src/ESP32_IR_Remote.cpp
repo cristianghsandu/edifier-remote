@@ -64,11 +64,13 @@ extern "C"
 #define NEC_ITEM_DURATION(d) ((d & 0x7fff) * 10 / TICK_10_US) // Parse duration time from memory register duration_us
 #define NEC_DATA_ITEM_COUNT 34                                // NEC code item number: header + 32bit data + end
 #define RMT_TX_DATA_NUM 100                                   // NEC tx test data number
-#define rmt_item32_tIMEOUT_US 9500                            // RMT receiver timeout duration_us(us)
+#define rmt_item32_TIMEOUT_US 9500                            // RMT receiver timeout duration_us(us)
+
 
 // ------- IRLIB
-const unsigned short NEC_REPEAT_ITEM_COUNT = 2;
 const unsigned int PERCENT_TOLERANCE = 25;
+const unsigned int NEC_REPEAT_ITEM_COUNT = 2;
+const uint32_t NEC_REPEAT_DATA = 0xFFFFFFFF;
 // -------------
 
 static RingbufHandle_t ringBuf;
@@ -253,12 +255,16 @@ bool ESP32_IRrecv::NEC_checkRange(int duration_ticks, int expected_us)
 
 bool ESP32_IRrecv::NEC_is0(rmt_item32_t *item)
 {
-  // return NEC_checkRange(item->duration0, NEC_BIT_ZERO_HIGH_US, NEC_BIT_MARGIN) && NEC_checkRange(item->duration1, NEC_BIT_ZERO_LOW_US, NEC_BIT_MARGIN);
+  return NEC_checkRange(item->duration0, NEC_BIT_ZERO_HIGH_US) && NEC_checkRange(item->duration1, NEC_BIT_ZERO_LOW_US);
 }
 
 bool ESP32_IRrecv::NEC_is1(rmt_item32_t *item)
 {
-  // return NEC_checkRange(item->duration0, NEC_BIT_ONE_HIGH_US, NEC_BIT_MARGIN) && NEC_checkRange(item->duration1, NEC_BIT_ONE_LOW_US, NEC_BIT_MARGIN);
+  return NEC_checkRange(item->duration0, NEC_BIT_ONE_HIGH_US) && NEC_checkRange(item->duration1, NEC_BIT_ONE_LOW_US);
+}
+
+bool ESP32_IRrecv::NEC_isEnd(rmt_item32_t* item) {
+
 }
 
 bool ESP32_IRrecv::NEC_isHeader(rmt_item32_t *item)
@@ -271,91 +277,42 @@ bool ESP32_IRrecv::NEC_isRepeat(rmt_item32_t *item)
   return NEC_checkRange(item->duration0, NEC_HEADER_HIGH_US) && NEC_checkRange(item->duration1, NEC_HEADER_REPEAT_LOW_US);
 }
 
-int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint16_t *addr, uint16_t *data)
+int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
 {
   if (itemCount == NEC_REPEAT_ITEM_COUNT)
   {
     Serial.println("Repeat");
     if (NEC_isRepeat(item))
     {
-      *data = 0xFFFF;
-      *addr = 0xFFFF;
+      *data = NEC_REPEAT_DATA;
       return 0;
     }
   }
   else if (itemCount == NEC_DATA_ITEM_COUNT)
   {
+    // All bits 0
+    *data = 0;
+    
     if (NEC_isHeader(item))
     {
-      item++;
       Serial.println("Header");
     }
-    Serial.println("--------------");
-    for (size_t i = 1; i < itemCount; i++, item++)
+
+    // Skip last item which is the end marker
+    for (size_t i = 1; i < itemCount - 1; i++)
     {
-      Serial.print("LOW: ");
-      Serial.println(NEC_ITEM_DURATION(item->duration0));
-      Serial.print("HIGH: ");
-      Serial.println(NEC_ITEM_DURATION(item->duration1));
+      if (NEC_is0(&item[i])) {
+        (*data) |= (1 << (i-1));
+      }
     }
-    Serial.println("--------------");
+
+    return itemCount - 2;
   }
   else
   {
     Serial.println("Unkown protocol");
+    return -1;
   }
-
-  // int w_len = itemCount;
-  // if (w_len < NEC_DATA_ITEM_COUNT)
-  // {
-  //   return -1;
-  // }
-
-  // int i = 0, j = 0;
-  // // if (!NEC_isHeader(*item))
-  // // {
-  // //   item++;
-  // //   return -1;
-  // // }
-
-  // uint16_t addr_t = 0;
-  // for (j = 0; j < 16; j++)
-  //   if (NEC_is1(item))
-  //   {
-  //     addr_t |= (1 << j);
-  //   }
-  //   else if (NEC_is0(item))
-  //   {
-  //     addr_t |= (0 << j);
-  //   }
-  //   else
-  //   {
-  //     return -1;
-  //   }
-  //   item++;
-  //   i++;
-  // }
-  // uint16_t data_t = 0;
-  // for (j = 0; j < 16; j++)
-  // {
-  //   if (NEC_is1(item))
-  //   {
-  //     data_t |= (1 << j);
-  //   }
-  //   else if (NEC_is0(item))
-  //   {
-  //     data_t |= (0 << j);
-  //   }
-  //   else
-  //   {
-  //     return -1;
-  //   }
-  //   item++;
-  //   i++;
-  // }
-  // *addr = addr_t;
-  // *data = data_t;
-  // return i;
 }
 
 int ESP32_IRrecv::readNEC()
@@ -375,13 +332,12 @@ int ESP32_IRrecv::readNEC()
       return 0;
     }
 
-    uint16_t addr, data;
-    // Serial.println(numItems);
-    auto res = decodeNEC(item, numItems, &addr, &data);
-    // Serial.println(res);
-    // Serial.println(data, HEX);
-    // Serial.println(addr, HEX);
-    vRingbufferReturnItem(ringBuf, (void *)item);
+    uint32_t data;
+    auto res = decodeNEC(item, numItems, &data);
+    Serial.println(res);
+    Serial.println(data, HEX);
+
+    // vRingbufferReturnItem(ringBuf, (void *)item);
 
     return (numItems * 2 - 1);
   }
