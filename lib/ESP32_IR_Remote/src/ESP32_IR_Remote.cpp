@@ -301,8 +301,10 @@ int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
     // Skip last item which is the end marker
     for (size_t i = 1; i < itemCount - 1; i++)
     {
-      if (NEC_is0(&item[i])) {
-        (*data) |= (1 << (i-1));
+      if (NEC_is1(item + i)) {
+        (*data) = (*data << 1) | 1;
+      } else if (NEC_is0(item+i)) {
+        (*data) <<= 1;
       }
     }
 
@@ -337,7 +339,7 @@ int ESP32_IRrecv::readNEC()
     Serial.println(res);
     Serial.println(data, HEX);
 
-    // vRingbufferReturnItem(ringBuf, (void *)item);
+    vRingbufferReturnItem(ringBuf, (void *)item);
 
     return (numItems * 2 - 1);
   }
