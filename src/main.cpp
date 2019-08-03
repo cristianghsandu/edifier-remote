@@ -45,7 +45,7 @@ void recvTaskFunc(void *params)
     edi_codes_t codeToSend = NONE;
     int data[4];
 
-    int count = irrecv.readNEC(&data[0], 4);
+    int count = irrecv.readNEC();
     // if (count == 0)
     // {
     //   for (int i = 0; i < 4; i++) {

@@ -57,6 +57,9 @@ extern "C"
 #define NEC_ONE_SPACE 1690
 #define NEC_ZERO_SPACE 560
 #define NEC_RPT_SPACE 2250
+#define NEC_HEADER_HIGH_US 9000 // NEC protocol header: positive 9ms
+#define NEC_HEADER_LOW_US 4500  // NEC protocol header: negative 4.5ms
+#define NEC_DATA_ITEM_NUM 34    // NEC code item number: header + 32bit data + end
 
 static RingbufHandle_t ringBuf;
 
@@ -244,6 +247,11 @@ bool ESP32_IRrecv::isInRange(rmt_item32_t item, int lowDuration, int highDuratio
   return true;
 }
 
+bool ESP32_IRrecv::NEC_isHeader(rmt_item32_t item)
+{
+  return isInRange(item, NEC_HEADER_LOW_US, NEC_HEADER_HIGH_US, 100);
+}
+
 bool ESP32_IRrecv::NEC_is0(rmt_item32_t item)
 {
   return isInRange(item, NEC_BIT_MARK, NEC_BIT_MARK, 100);
@@ -254,110 +262,91 @@ bool ESP32_IRrecv::NEC_is1(rmt_item32_t item)
   return isInRange(item, NEC_BIT_MARK, NEC_ONE_SPACE, 100);
 }
 
-int ESP32_IRrecv::decodeNEC(rmt_item32_t *data, int numItems)
+int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, uint16_t *data)
 {
-  if (!isInRange(data[0], NEC_HDR_MARK, NEC_HDR_SPACE, 200))
+  int w_len = item_num;
+  if (w_len < NEC_DATA_ITEM_NUM)
   {
-    //ESP_LOGD(TAG, "Not an NEC");
-    return 0;
+    return -1;
   }
 
-  int i;
-  uint8_t address = 0, notAddress = 0, command = 0, notCommand = 0;
-  int accumCounter = 0;
-  uint8_t accumValue = 0;
-  for (i = 1; i < numItems; i++)
+  int i = 0, j = 0;
+  if (!NEC_isHeader(*item))
   {
-    if (NEC_is0(data[i]))
+    item++;
+    return -1;
+  }
+
+  uint16_t addr_t = 0;
+  for (j = 0; j < 16; j++)
+  {
+    if (NEC_is1(*item))
     {
-      //ESP_LOGD(TAG, "%d: 0", i);
-      accumValue = accumValue >> 1;
+      addr_t |= (1 << j);
     }
-    else if (NEC_is1(data[i]))
+    else if (NEC_is0(*item))
     {
-      //ESP_LOGD(TAG, "%d: 1", i);
-      accumValue = (accumValue >> 1) | 0x80;
+      addr_t |= (0 << j);
     }
     else
     {
-      //ESP_LOGD(TAG, "Unknown");
+      return -1;
     }
-    if (accumCounter == 7)
+    item++;
+    i++;
+  }
+  uint16_t data_t = 0;
+  for (j = 0; j < 16; j++)
+  {
+    if (NEC_is1(*item))
     {
-      accumCounter = 0;
-      //ESP_LOGD(TAG, "Byte: 0x%.2x", accumValue);
-      if (i == 8)
-      {
-        address = accumValue;
-      }
-      else if (i == 16)
-      {
-        notAddress = accumValue;
-      }
-      else if (i == 24)
-      {
-        command = accumValue;
-      }
-      else if (i == 32)
-      {
-        notCommand = accumValue;
-      }
-      accumValue = 0;
+      data_t |= (1 << j);
+    }
+    else if (NEC_is0(*item))
+    {
+      data_t |= (0 << j);
     }
     else
     {
-      accumCounter++;
+      return -1;
     }
+    item++;
+    i++;
   }
-  //ESP_LOGD(TAG, "Address: 0x%.2x, NotAddress: 0x%.2x", address, notAddress ^ 0xff);
-  if (address != (notAddress ^ 0xff) || command != (notCommand ^ 0xff))
-  {
-    // Data mis match
-    return 0;
-  }
-  // Serial.print("Address: ");
-  // Serial.print(address);
-  // Serial.print(" Command: ");
-  // Serial.println(command);
-
-  return command;
+  *addr = addr_t;
+  *data = data_t;
+  return i;
 }
 
-int ESP32_IRrecv::readNEC(int *data, int maxBuf)
+int ESP32_IRrecv::readNEC()
 {
   RingbufHandle_t rb = NULL;
   rmt_config_t config;
   config.channel = (rmt_channel_t)rmtport;
 
-  memset(data, 0, maxBuf);
-
   rmt_get_ringbuf_handle(config.channel, &rb);
-  int count = maxBuf;
-  if (rb)
+  while (rb)
   {
     Serial.print("NEC IR Code :");
-    while (count)
+
+    size_t itemSize = 0;
+    rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
+    int numItems = itemSize / sizeof(rmt_item32_t);
+    if (numItems == 0)
     {
-      size_t itemSize = 0;
-      rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
-      int numItems = itemSize / sizeof(rmt_item32_t);
-      if (numItems == 0)
-      {
-        return 0;
-      }
-
-      data[count] = decodeNEC(item, numItems);
-      Serial.print(data[count]);
-      vRingbufferReturnItem(ringBuf, (void *)item);
-
-      count--;
+      return 0;
     }
-    Serial.println();
 
-    return maxBuf - count;
+    uint16_t addr, data;
+    auto res = decodeNEC(item, numItems, &addr, &data);
+    Serial.print(data, HEX);
+    Serial.print(addr, HEX);
+    vRingbufferReturnItem(ringBuf, (void *)item);
+
+    Serial.println();
+    return (numItems * 2 - 1);
   }
 
-  vTaskDelete(NULL);
   return 0;
 }
 

@@ -57,7 +57,7 @@ public:
   int readIR(int *data, int maxBuf);
   void sendIR(int *data, int IRlength);
   // NEC
-  int readNEC(int *data, int maxBuf);
+  int readNEC();
 
 private:
   int gpionum;
@@ -70,7 +70,8 @@ private:
   bool isInRange(rmt_item32_t item, int lowDuration, int highDuration, int tolerance);
   bool NEC_is0(rmt_item32_t item);
   bool NEC_is1(rmt_item32_t item);
-  int decodeNEC(rmt_item32_t *data, int numItems);
+  bool NEC_isHeader(rmt_item32_t item);
+  int decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, uint16_t *data);
 };
 
 #endif /* ESP32_IR_REMOTE_H_ */
