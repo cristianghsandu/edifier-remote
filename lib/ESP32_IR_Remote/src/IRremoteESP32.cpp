@@ -208,17 +208,23 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
   // Fill items
   size_t i = 1;
   buildHeaderItem(items);
-  for (; i < NEC_DATA_ITEM_COUNT - 1; i++)
+
+  uint32_t dataToSend = data;
+  for (; i < NEC_DATA_ITEM_COUNT - 1; i++, dataToSend >>= 1)
   {
-    if (data & (1 >> i))
+    if (dataToSend & 0x1)
     {
+      Serial.print(1);
       buildOneItem(items + i);
     }
     else
     {
-      buildZeroItem(items + 1);
+      Serial.print(0);
+      buildZeroItem(items + i);
     }
   }
+  Serial.println();
+  
   buildEndItem(items + i);
 
   sendRMT(items) ;
