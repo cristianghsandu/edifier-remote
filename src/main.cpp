@@ -29,7 +29,7 @@ enum edi_codes_t
   NONE
 };
 
-const unsigned int SEND_REPEAT = 1;
+const unsigned int SEND_REPEAT = 2;
 
 void recvTaskFunc(void *params)
 {
@@ -91,7 +91,7 @@ void sendTaskFunc(void *params)
       switch (*codeToSend)
       {
       case VOL_DOWN:
-        irsend.sendNEC(EDI_VOL_DOWN);
+        irsend.sendNEC(EDI_VOL_UP);
         break;
       case VOL_UP:
         irsend.sendNEC(EDI_VOL_UP);
@@ -103,6 +103,15 @@ void sendTaskFunc(void *params)
       default:
         *codeToSend = NONE;
         break;
+      }
+
+      if (*codeToSend != NONE)
+      {
+        for (size_t i = 0; i < SEND_REPEAT; i++)
+        {
+          irsend.sendNEC(NEC_REPEAT_DATA);
+          vTaskDelay(20 / portTICK_PERIOD_MS);
+        }
       }
     }
   }

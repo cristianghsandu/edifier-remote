@@ -193,7 +193,7 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
     memset((void *)items, 0, size);
 
     buildItem(items, NEC_HEADER_HIGH_US, NEC_HEADER_REPEAT_LOW_US);
-    buildEndItem(items + 1);
+    buildItem(items + 1, NEC_BIT_END, 0);
 
     sendRMT(items);
 
@@ -317,7 +317,7 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
     {
       Serial.print("HIGH: ");
       Serial.print(NEC_ITEM_DURATION((item + i)->duration0));
-      Serial.print(" LOW: ");      
+      Serial.print(" LOW: ");
       Serial.print(NEC_ITEM_DURATION((item + i)->duration1));
       Serial.println();
     }
