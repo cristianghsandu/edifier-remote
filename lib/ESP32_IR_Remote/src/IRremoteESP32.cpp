@@ -42,6 +42,7 @@ extern "C"
 #define NEC_HEADER_HIGH_US 9000       // NEC protocol header: positive 9ms
 #define NEC_HEADER_LOW_US 4500        // NEC protocol header: negative 4.5m
 #define NEC_HEADER_REPEAT_LOW_US 2200 // NEC protocol header, repeat: negative 2.2ms
+#define NEC_HEADER_ITEM_COUNT 2
 
 #define NEC_BIT_ONE_HIGH_US 560                           // NEC protocol data bit 1: positive 0.56ms
 #define NEC_BIT_ONE_LOW_US (2250 - NEC_BIT_ONE_HIGH_US)   // NEC protocol data bit 1: negative 1.69ms
@@ -55,11 +56,9 @@ extern "C"
 #define RMT_TX_DATA_NUM 100                                   // NEC tx test data number
 #define rmt_item32_TIMEOUT_US 9500                            // RMT receiver timeout duration_us(us)
 
-// ------- IRLIB
-const unsigned int PERCENT_TOLERANCE = 25;
-const unsigned int NEC_REPEAT_ITEM_COUNT = 2;
-const uint32_t NEC_REPEAT_DATA = 0xFFFFFFFF;
-// -------------
+#define PERCENT_TOLERANCE 25
+#define NEC_REPEAT_ITEM_COUNT 2
+#define NEC_REPEAT_DATA 0xFFFFFFFF
 
 IRremoteESP32::IRremoteESP32()
 {
@@ -136,18 +135,18 @@ void IRremoteESP32::initReceive()
 void IRremoteESP32::initSend()
 {
   rmt_config_t config;
+  config.rmt_mode = RMT_MODE_TX;
   config.channel = (rmt_channel_t)rmtport;
   config.gpio_num = (gpio_num_t)gpionum;
-  config.mem_block_num = 1; //how many memory blocks 64 x N (0-7)
+  config.mem_block_num = 7; //how many memory blocks 64 x N (0-7)
   config.clk_div = CLK_DIV;
   config.tx_config.loop_en = false;
-  config.tx_config.carrier_duty_percent = 30;
+  config.tx_config.carrier_duty_percent = 50;
   config.tx_config.carrier_freq_hz = 38000;
   config.tx_config.carrier_level = RMT_CARRIER_LEVEL_HIGH;
   config.tx_config.carrier_en = true;
   config.tx_config.idle_level = RMT_IDLE_LEVEL_LOW;
   config.tx_config.idle_output_en = true;
-  config.rmt_mode = (rmt_mode_t)0; //RMT_MODE_TX;
   rmt_config(&config);
   rmt_driver_install(config.channel, 0, 0); //19     /*!< RMT interrupt number, select from soc.h */
 }
@@ -189,6 +188,15 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
   {
     // Send only the repeat header
     //mark (564* 16); space(564*4); mark(564);space(572);delay(97);//actually 97572us
+    size_t size = sizeof(rmt_item32_t) * 2;
+    rmt_item32_t *items = (rmt_item32_t *)malloc(size);
+    memset((void *)items, 0, size);
+
+    buildItem(items, NEC_HEADER_HIGH_US, NEC_HEADER_LOW_US);
+    buildEndItem(items + 1);
+
+    sendRMT(items);
+
     return;
   }
 
@@ -213,6 +221,11 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
   }
   buildEndItem(items + i);
 
+  sendRMT(items) ;
+}
+
+void IRremoteESP32::sendRMT(rmt_item32_t *items)
+{
   // RMT send
   rmt_write_items((rmt_channel_t)rmtport, items, NEC_DATA_ITEM_COUNT, true);
   // Wait for send to finish
@@ -235,9 +248,9 @@ void IRremoteESP32::stopIR()
 void IRremoteESP32::buildItem(rmt_item32_t *item, int high_us, int low_us)
 {
   item->level0 = true;
-  item->duration0 = (high_us / 10 * TICK_10_US);
+  item->duration0 = (high_us) / 10 * TICK_10_US;
   item->level1 = false;
-  item->duration1 = (low_us / 10 * TICK_10_US);
+  item->duration1 = (low_us) / 10 * TICK_10_US;
 }
 
 void IRremoteESP32::buildHeaderItem(rmt_item32_t *item)
@@ -252,7 +265,7 @@ void IRremoteESP32::buildOneItem(rmt_item32_t *item)
 
 void IRremoteESP32::buildZeroItem(rmt_item32_t *item)
 {
-  buildItem(item, NEC_BIT_ZERO_HIGH_US, NEC_BIT_ZERO_HIGH_US);
+  buildItem(item, NEC_BIT_ZERO_HIGH_US, NEC_BIT_ZERO_LOW_US);
 }
 
 void IRremoteESP32::buildEndItem(rmt_item32_t *item)

@@ -56,10 +56,6 @@ private:
   int gpionum;
   int rmtport;
   void buildItem(rmt_item32_t *item, int high_us, int low_us);
-  void buildHeaderItem(rmt_item32_t *item);
-  void buildZeroItem(rmt_item32_t *item);
-  void buildOneItem(rmt_item32_t *item);
-  void buildEndItem(rmt_item32_t *item);
 
   // NEC
   bool NEC_checkRange(int duration_ticks, int expected_us);
@@ -69,6 +65,11 @@ private:
   bool NEC_isRepeat(rmt_item32_t *item);
   bool NEC_isEnd(rmt_item32_t *item);
   int decodeNEC(rmt_item32_t *item, int item_num, uint32_t *data);
+  void buildHeaderItem(rmt_item32_t *item);
+  void buildZeroItem(rmt_item32_t *item);
+  void buildOneItem(rmt_item32_t *item);
+  void buildEndItem(rmt_item32_t *item);
+  void sendRMT(rmt_item32_t *items);
 };
 
 #endif /* ESP32_IR_REMOTE_H_ */

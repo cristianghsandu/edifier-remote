@@ -64,6 +64,7 @@ void recvTaskFunc(void *params)
         *codeToSend = MUTE;
         break;
       default:
+        *codeToSend = NONE;
         break;
       }
 
