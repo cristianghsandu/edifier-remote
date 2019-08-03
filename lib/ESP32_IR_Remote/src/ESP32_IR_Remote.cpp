@@ -42,24 +42,27 @@ extern "C"
 #define roundTo 50                 //rounding microseconds timings
 #define MARK_EXCESS 220            //tweeked to get the right timing
 #define SPACE_EXCESS 190           //tweeked to get the right timing
-#define rmt_item32_TIMEOUT_US 5000 /*!< RMT receiver timeout value(us) */
+#define rmt_item32_TIMEOUT_US 5000 // RMT receiver timeout value(us)
 
 // Clock divisor (base clock is 80MHz)
-#define CLK_DIV 80
+#define CLK_DIV 100
 
 // Number of clock ticks that represent 10us.  10 us = 1/100th msec.
 #define TICK_10_US (80000000 / CLK_DIV / 100000)
 
-#define NEC_BITS 32
-#define NEC_HDR_MARK 9000
-#define NEC_HDR_SPACE 4500
-#define NEC_BIT_MARK 560
-#define NEC_ONE_SPACE 1690
-#define NEC_ZERO_SPACE 560
-#define NEC_RPT_SPACE 2250
-#define NEC_HEADER_HIGH_US 9000 // NEC protocol header: positive 9ms
-#define NEC_HEADER_LOW_US 4500  // NEC protocol header: negative 4.5ms
-#define NEC_DATA_ITEM_NUM 34    // NEC code item number: header + 32bit data + end
+#define NEC_HEADER_HIGH_US 9000                           // NEC protocol header: positive 9ms
+#define NEC_HEADER_LOW_US 4500                            // NEC protocol header: negative 4.5m
+#define NEC_BIT_ONE_HIGH_US 560                           // NEC protocol data bit 1: positive 0.56ms
+#define NEC_BIT_ONE_LOW_US (2250 - NEC_BIT_ONE_HIGH_US)   // NEC protocol data bit 1: negative 1.69ms
+#define NEC_BIT_ZERO_HIGH_US 560                          // NEC protocol data bit 0: positive 0.56ms
+#define NEC_BIT_ZERO_LOW_US (1120 - NEC_BIT_ZERO_HIGH_US) // NEC protocol data bit 0: negative 0.56ms
+#define NEC_BIT_END 560                                   // NEC protocol end: positive 0.56ms
+#define NEC_BIT_MARGIN 20                                 // NEC parse margin time
+
+#define NEC_ITEM_DURATION(d) ((d & 0x7fff) * 10 / TICK_10_US) // Parse duration time from memory register value
+#define NEC_DATA_ITEM_NUM 34                                  // NEC code item number: header + 32bit data + end
+#define RMT_TX_DATA_NUM 100                                   // NEC tx test data number
+#define rmt_item32_tIMEOUT_US 9500                            // RMT receiver timeout value(us)
 
 static RingbufHandle_t ringBuf;
 
@@ -230,36 +233,31 @@ void ESP32_IRrecv::decodeRAW(rmt_item32_t *data, int numItems, int *datato)
   Serial.println();
 }
 
-bool ESP32_IRrecv::isInRange(rmt_item32_t item, int lowDuration, int highDuration, int tolerance)
+bool ESP32_IRrecv::NEC_checkRange(int duration_ticks, int target_us, int margin_us)
 {
-  uint32_t lowValue = item.duration0 * 10 / TICK_10_US;
-  uint32_t highValue = item.duration1 * 10 / TICK_10_US;
-  /*
-  ESP_LOGI(TAG, "lowValue=%d, highValue=%d, lowDuration=%d, highDuration=%d",
-    lowValue, highValue, lowDuration, highDuration);
-  */
-  if (lowValue < (lowDuration - tolerance) || lowValue > (lowDuration + tolerance) ||
-      (highValue != 0 &&
-       (highValue < (highDuration - tolerance) || highValue > (highDuration + tolerance))))
+  if ((NEC_ITEM_DURATION(duration_ticks) < (target_us + margin_us)) && (NEC_ITEM_DURATION(duration_ticks) > (target_us - margin_us)))
+  {
+    return true;
+  }
+  else
   {
     return false;
   }
-  return true;
 }
 
-bool ESP32_IRrecv::NEC_isHeader(rmt_item32_t item)
+// bool ESP32_IRrecv::NEC_isHeader(rmt_item32_t item)
+// {
+//   return isInRange(item, NEC_HEADER_LOW_US, NEC_HEADER_HIGH_US, NEC_BIT_MARGIN);
+// }
+
+bool ESP32_IRrecv::NEC_is0(rmt_item32_t *item)
 {
-  return isInRange(item, NEC_HEADER_LOW_US, NEC_HEADER_HIGH_US, 100);
+  return NEC_checkRange(item->duration0, NEC_BIT_ZERO_HIGH_US, NEC_BIT_MARGIN) && NEC_checkRange(item->duration1, NEC_BIT_ZERO_LOW_US, NEC_BIT_MARGIN);
 }
 
-bool ESP32_IRrecv::NEC_is0(rmt_item32_t item)
+bool ESP32_IRrecv::NEC_is1(rmt_item32_t* item)
 {
-  return isInRange(item, NEC_BIT_MARK, NEC_BIT_MARK, 100);
-}
-
-bool ESP32_IRrecv::NEC_is1(rmt_item32_t item)
-{
-  return isInRange(item, NEC_BIT_MARK, NEC_ONE_SPACE, 100);
+  return NEC_checkRange(item->duration0, NEC_BIT_ONE_HIGH_US, NEC_BIT_MARGIN) && NEC_checkRange(item->duration1, NEC_BIT_ONE_LOW_US, NEC_BIT_MARGIN);
 }
 
 int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, uint16_t *data)
@@ -271,20 +269,20 @@ int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, ui
   }
 
   int i = 0, j = 0;
-  if (!NEC_isHeader(*item))
-  {
-    item++;
-    return -1;
-  }
+  // if (!NEC_isHeader(*item))
+  // {
+  //   item++;
+  //   return -1;
+  // }
 
   uint16_t addr_t = 0;
   for (j = 0; j < 16; j++)
   {
-    if (NEC_is1(*item))
+    if (NEC_is1(item))
     {
       addr_t |= (1 << j);
     }
-    else if (NEC_is0(*item))
+    else if (NEC_is0(item))
     {
       addr_t |= (0 << j);
     }
@@ -298,11 +296,11 @@ int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, ui
   uint16_t data_t = 0;
   for (j = 0; j < 16; j++)
   {
-    if (NEC_is1(*item))
+    if (NEC_is1(item))
     {
       data_t |= (1 << j);
     }
-    else if (NEC_is0(*item))
+    else if (NEC_is0(item))
     {
       data_t |= (0 << j);
     }
@@ -327,8 +325,6 @@ int ESP32_IRrecv::readNEC()
   rmt_get_ringbuf_handle(config.channel, &rb);
   while (rb)
   {
-    Serial.print("NEC IR Code :");
-
     size_t itemSize = 0;
     rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
     int numItems = itemSize / sizeof(rmt_item32_t);
@@ -338,12 +334,13 @@ int ESP32_IRrecv::readNEC()
     }
 
     uint16_t addr, data;
+    Serial.println(numItems);
     auto res = decodeNEC(item, numItems, &addr, &data);
-    Serial.print(data, HEX);
-    Serial.print(addr, HEX);
+    Serial.println(res);
+    // Serial.println(data, HEX);
+    // Serial.println(addr, HEX);
     vRingbufferReturnItem(ringBuf, (void *)item);
 
-    Serial.println();
     return (numItems * 2 - 1);
   }
 
