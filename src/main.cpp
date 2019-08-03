@@ -1,10 +1,18 @@
-#include <IRLibSendBase.h>
-#include <IRLibDecodeBase.h>
-#include <IRLib_P01_NEC.h>
-#include <IRLibCombo.h>
-#include <IRLibRecvPCI.h>
+/*
+* Copyright 2019 Cristian Sandu
+* IR code translator
+*/
+#include <Arduino.h>
+#include <IRremote.h>
+#include <IRremoteESP32.h>
 
-const int RECV_PIN = 2;
+TaskHandle_t senderTask;
+TaskHandle_t receiverTask;
+
+xQueueHandle sendQueue;
+
+const int RECV_PIN = 13;
+const int SEND_PIN = 12;
 
 const uint32_t LG_VOL_UP = 0xEF00FF;
 const uint32_t LG_VOL_DOWN = 0xEF807F;
@@ -12,13 +20,15 @@ const uint32_t LG_MUTE = 0xEF6897;
 
 const uint32_t EDI_VOL_UP = 0x08E7609F;
 const uint32_t EDI_VOL_DOWN = 0x08E7E21D;
-const uint32_t EDI_VOL_MUTE = 0x08E7827D;
-const uint32_t EDI_REPEAT = 0xFFFFFFFF;
+const uint32_t EDI_MUTE = 0x08E7827D;
 
-IRrecvPCI irrecv(RECV_PIN);
-IRsend irsend; // PWM pin 3
-
-IRdecode necDecoder;
+enum edi_codes_t
+{
+  VOL_UP,
+  VOL_DOWN,
+  MUTE,
+  NONE
+};
 
 const unsigned int SIGNAL_REPEAT = 10;
 
@@ -26,56 +36,112 @@ unsigned long time = 0;
 unsigned long dt = 0;
 uint32_t code = 0;
 
-void setup()
+void recvTaskFunc(void *params)
 {
-  Serial.begin(9600);
-  // In case the interrupt driver crashes on setup, give a clue
-  // to the user what's going on.
-  Serial.println("Enabling IRin");
-  irrecv.enableIRIn(); // Start the receiver
-  Serial.println("Enabled IRin");
+  IRremoteESP32 irrecv;
+  irrecv.setRecvPin(RECV_PIN, 1);
+  irrecv.initReceive();
+
+  const TickType_t ticksToWait = pdMS_TO_TICKS(100);
+
+  int *codeToSend = new int(NONE);
+  for (;;)
+  {
+
+    uint32_t data;
+    if (irrecv.readNEC(&data))
+    {
+      Serial.println(data, HEX);
+
+      switch (data)
+      {
+      case LG_VOL_DOWN:
+        *codeToSend = VOL_DOWN;
+        break;
+      case LG_VOL_UP:
+        *codeToSend = VOL_UP;
+        break;
+      case LG_MUTE:
+        *codeToSend = MUTE;
+        break;
+      default:
+        *codeToSend = NONE;
+        break;
+      }
+
+      if (*codeToSend != NONE)
+      {
+        xQueueSendToFront(sendQueue, codeToSend, ticksToWait);
+      }
+    }
+  }
+
+  // TODO: this is unreachable
+  delete codeToSend;
+}
+
+void sendTaskFunc(void *params)
+{
+  IRremoteESP32 irsend;
+  irsend.setSendPin(SEND_PIN, 0);
+  irsend.initSend();
+
+  const TickType_t ticksToWait = pdMS_TO_TICKS(100);
+
+  int *codeToSend = new int(NONE);
+  for (;;)
+  {
+    if (xQueueReceive(sendQueue, codeToSend, ticksToWait) == pdPASS)
+    {
+      switch (*codeToSend)
+      {
+      case VOL_DOWN:
+        irsend.sendNEC(EDI_VOL_DOWN);
+        break;
+      case VOL_UP:
+        irsend.sendNEC(EDI_VOL_UP);
+        break;
+      case MUTE:
+        irsend.sendNEC(EDI_MUTE);
+        break;
+      case NONE:
+      default:
+        break;
+      }
+    }
+  }
+
+  // TODO: this is unreachable
+  delete codeToSend;
 }
 
 void loop()
 {
-  // Time since last recv
-  dt = millis() - time;
-  time = millis();
-  // Serial.println(dt);
-  // Repeat, this will not trigger
-  // if (dt < 500)
-  // {
-  //   irsend.send(NEC, EDI_REPEAT);
-  // }
+  // Nada
+}
 
-  if (irrecv.getResults())
-  {
-    necDecoder.decode();
+void setup()
+{
+  Serial.begin(115200);
 
-    // Serial.println(necDecoder.value, HEX);
-    // Serial.println(Pnames(necDecoder.protocolNum));
+  // A queue of max 5 elements
+  sendQueue = xQueueCreate(5, sizeof(edi_codes_t));
 
-    switch (necDecoder.value)
-    {
-    case LG_VOL_DOWN:
-      code = EDI_VOL_DOWN;
-      break;
-    case LG_VOL_UP:
-      code = EDI_VOL_UP;
-      break;
-    case LG_MUTE:
-      code = EDI_VOL_MUTE;
-      break;
-    default:
-      break;
-    }
+  xTaskCreatePinnedToCore(
+      recvTaskFunc,
+      "recvTask",
+      10000,
+      NULL,
+      1,
+      NULL,
+      0);
 
-    irsend.send(NEC, code);
-    for (size_t i = 0; i < SIGNAL_REPEAT; i++) {
-      irsend.send(NEC, EDI_REPEAT);
-    }
-    code = necDecoder.value;
-  }
-
-  irrecv.enableIRIn();
+  xTaskCreatePinnedToCore(
+      sendTaskFunc,
+      "sendTask",
+      10000,
+      NULL,
+      1,
+      NULL,
+      1);
 }
