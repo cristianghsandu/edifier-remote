@@ -315,7 +315,6 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   }
   else if (itemCount == NEC_DATA_ITEM_COUNT)
   {
-    // All bits 0
     if (NEC_isHeader(item))
     {
       // Skip
