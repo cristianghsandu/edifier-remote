@@ -60,7 +60,6 @@ extern "C"
 
 #define PERCENT_TOLERANCE 25
 #define NEC_REPEAT_ITEM_COUNT 2
-#define NEC_REPEAT_DATA 0xFFFFFFFF
 
 IRremoteESP32::IRremoteESP32()
 {

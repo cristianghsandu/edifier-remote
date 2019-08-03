@@ -31,6 +31,8 @@ extern "C"
 }
 #endif
 
+#define NEC_REPEAT_DATA 0xFFFFFFFF
+
 class IRremoteESP32
 {
 public:
