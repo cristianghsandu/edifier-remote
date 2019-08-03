@@ -71,7 +71,8 @@ private:
   bool NEC_checkRange(int duration_ticks, int expected_us);
   bool NEC_is0(rmt_item32_t* item);
   bool NEC_is1(rmt_item32_t* item);
-  // bool NEC_isHeader(rmt_item32_t* item);
+  bool NEC_isHeader(rmt_item32_t* item);
+  bool NEC_isRepeat(rmt_item32_t* item);
   int decodeNEC(rmt_item32_t *item, int item_num, uint16_t *addr, uint16_t *data);
 };
 
