@@ -18,13 +18,9 @@ const unsigned long LG_VOL_UP = 0xEF00FF;
 const unsigned long LG_VOL_DOWN = 0xEF807F;
 const unsigned long LG_MUTE = 0xEF6897;
 
-const uint32_t EDI_VOL_UP = 0x8E7609F;
-const uint32_t EDI_VOL_DOWN = 0x8E7E21D;
-const uint32_t EDI_MUTE = 0x8E7827D;
-
-// IRremote only supports receiving on the ESP32
-IRremoteESP32 irrecv;
-IRremoteESP32 irsend;
+const uint32_t EDI_VOL_UP = 0x08E7609F;
+const uint32_t EDI_VOL_DOWN = 0x08E7E21D;
+const uint32_t EDI_MUTE = 0x08E7827D;
 
 enum edi_codes_t
 {
@@ -41,11 +37,15 @@ decode_results results;
 
 void recvTaskFunc(void *params)
 {
+  IRremoteESP32 irrecv;
+  irrecv.setRecvPin(RECV_PIN, 1);
+  irrecv.initReceive();
+
   const TickType_t ticksToWait = pdMS_TO_TICKS(100);
 
+  int *codeToSend = new int(NONE);
   for (;;)
   {
-    edi_codes_t codeToSend = NONE;
 
     uint32_t data;
     if (irrecv.readNEC(&data))
@@ -54,44 +54,64 @@ void recvTaskFunc(void *params)
 
       switch (data)
       {
-         case LG_VOL_DOWN:
-          codeToSend = VOL_DOWN;
-          break;
+      case LG_VOL_DOWN:
+        *codeToSend = VOL_DOWN;
+        break;
+      case LG_VOL_UP:
+        *codeToSend = VOL_UP;
+        break;
+      case LG_MUTE:
+        *codeToSend = MUTE;
+        break;
+      default:
+        break;
       }
 
-      if (codeToSend != NONE) {
-        xQueueSendToFront(sendQueue, (void*)codeToSend, ticksToWait);
+      if (*codeToSend != NONE)
+      {
+        xQueueSendToFront(sendQueue, codeToSend, ticksToWait);
       }
     }
   }
+
+  // TODO: this is unreachable
+  delete codeToSend;
 }
 
 void sendTaskFunc(void *params)
 {
+  IRremoteESP32 irsend;
+  irsend.setSendPin(SEND_PIN, 0);
+  irsend.initSend();
+
   const TickType_t ticksToWait = pdMS_TO_TICKS(100);
 
-  edi_codes_t codeToSend;
+  int *codeToSend = new int(NONE);
   for (;;)
   {
-    if (xQueueReceive(sendQueue, &codeToSend, ticksToWait) == pdPASS)
+    if (xQueueReceive(sendQueue, codeToSend, ticksToWait) == pdPASS)
     {
-      switch (codeToSend)
+      Serial.println(*codeToSend);
+      switch (*codeToSend)
       {
       case VOL_DOWN:
         irsend.sendNEC(EDI_VOL_DOWN);
         break;
-      case VOL_UP:
-        irsend.sendNEC(EDI_VOL_UP);
-        break;
-      case MUTE:
-        irsend.sendNEC(EDI_MUTE);
-        break;
-      case NONE:
-      default:
-        break;
+        //   case VOL_UP:
+        //     irsend.sendNEC(EDI_VOL_UP);
+        //     break;
+        //   case MUTE:
+        //     irsend.sendNEC(EDI_MUTE);
+        //     break;
+        //   case NONE:
+        //   default:
+        //     break;
       }
     }
   }
+
+  // TODO: this is unreachable
+  delete codeToSend;
 }
 
 void loop()
@@ -102,12 +122,6 @@ void loop()
 void setup()
 {
   Serial.begin(115200);
-
-  irsend.setSendPin(SEND_PIN, 0);
-  irsend.initSend();
-
-  irrecv.setRecvPin(RECV_PIN, 1);
-  irrecv.initReceive();
 
   // A queue of max 5 elements
   sendQueue = xQueueCreate(5, sizeof(edi_codes_t));

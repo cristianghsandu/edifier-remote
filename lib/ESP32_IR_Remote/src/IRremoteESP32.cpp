@@ -185,9 +185,6 @@ void IRremoteESP32::sendRAW(int *data, int IRlength)
 
 void IRremoteESP32::sendNEC(const uint32_t &data)
 {
-  rmt_config_t config;
-  config.channel = (rmt_channel_t)rmtport;
-
   if (data == NEC_REPEAT_DATA)
   {
     // Send only the repeat header
@@ -201,9 +198,9 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
   memset((void *)items, 0, size);
 
   // Fill items
-  size_t i = 0;
+  size_t i = 1;
   buildHeaderItem(items);
-  for (; i < NEC_DATA_ITEM_COUNT; i++)
+  for (; i < NEC_DATA_ITEM_COUNT - 1; i++)
   {
     if (data & (1 >> i))
     {
@@ -217,9 +214,9 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
   buildEndItem(items + i);
 
   // RMT send
-  rmt_write_items(config.channel, items, NEC_DATA_ITEM_COUNT, true);
+  rmt_write_items((rmt_channel_t)rmtport, items, NEC_DATA_ITEM_COUNT, true);
   // Wait for send to finish
-  rmt_wait_tx_done(config.channel, 1);
+  rmt_wait_tx_done((rmt_channel_t)rmtport, 1);
   // Free memory when send is done
   free(items);
 }
