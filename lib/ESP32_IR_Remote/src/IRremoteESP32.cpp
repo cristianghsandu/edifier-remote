@@ -301,7 +301,7 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   if (itemCount == NEC_REPEAT_ITEM_COUNT)
   {
     *data = NEC_REPEAT_DATA;
-    return 0;
+    return NEC_REPEAT_ITEM_COUNT;
   }
   else if (itemCount == NEC_DATA_ITEM_COUNT)
   {
@@ -311,8 +311,8 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
       // Skip
     }
 
-    // Skip last item which is the end marker
-    for (size_t i = 1; i < itemCount - 1; i++)
+    // Skip header and the end marker
+    for (size_t i = 1; i < itemCount - 2; i++)
     {
       if (NEC_is1(item + i))
       {

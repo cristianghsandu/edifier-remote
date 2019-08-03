@@ -94,13 +94,13 @@ void sendTaskFunc(void *params)
       switch (codeToSend)
       {
       case VOL_DOWN:
-        // irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_VOL_DOWN_RAW) / sizeof(EDI_VOL_DOWN_RAW[0]) - 1);
+        irsend.sendNEC(EDI_VOL_DOWN);
         break;
       case VOL_UP:
-        // irsend.sendIR(EDI_VOL_UP_RAW, sizeof(EDI_VOL_UP_RAW) / sizeof(EDI_VOL_UP_RAW[0]) - 1);
+        irsend.sendNEC(EDI_VOL_UP);
         break;
       case MUTE:
-        // irsend.sendIR(EDI_VOL_DOWN_RAW, sizeof(EDI_MUTE_RAW) / sizeof(EDI_MUTE_RAW[0]) - 1);
+        irsend.sendNEC(EDI_MUTE);
         break;
       case NONE:
       default:
