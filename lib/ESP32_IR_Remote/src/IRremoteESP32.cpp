@@ -61,8 +61,6 @@ const unsigned int NEC_REPEAT_ITEM_COUNT = 2;
 const uint32_t NEC_REPEAT_DATA = 0xFFFFFFFF;
 // -------------
 
-static RingbufHandle_t ringBuf;
-
 IRremoteESP32::IRremoteESP32()
 {
 }
@@ -132,7 +130,6 @@ void IRremoteESP32::initReceive()
   config.clk_div = CLK_DIV;
   ESP_ERROR_CHECK(rmt_config(&config));
   ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
-  rmt_get_ringbuf_handle(config.channel, &ringBuf);
   rmt_rx_start(config.channel, 1);
 }
 
@@ -312,7 +309,7 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
     }
 
     // Skip header and the end marker
-    for (size_t i = 1; i < itemCount - 2; i++)
+    for (size_t i = 1; i < itemCount - 1; i++)
     {
       if (NEC_is1(item + i))
       {
@@ -336,17 +333,24 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
 int IRremoteESP32::readNEC(uint32_t *data)
 {
   size_t itemSize = 0;
-  rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(ringBuf, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
-  int numItems = itemSize / sizeof(rmt_item32_t);
-  if (numItems == 0)
+  RingbufHandle_t rb = NULL;
+  rmt_get_ringbuf_handle((rmt_channel_t)rmtport, &rb);
+
+  while (rb)
   {
-    return 0;
+    rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
+    int numItems = itemSize / sizeof(rmt_item32_t);
+    if (numItems == 0)
+    {
+      return 0;
+    }
+
+    auto res = decodeNEC(item, numItems, data);
+
+    // TODO: Why do we need to put it back?
+    vRingbufferReturnItem(rb, (void *)item);
+    return res;
   }
 
-  auto res = decodeNEC(item, numItems, data);
-
-  // TODO: Why do we need to put it back?
-  vRingbufferReturnItem(ringBuf, (void *)item);
-
-  return res;
+  return 0;
 }

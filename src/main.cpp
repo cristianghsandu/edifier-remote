@@ -52,32 +52,32 @@ void recvTaskFunc(void *params)
     {
       Serial.println(data, HEX);
 
-        switch (data)
-        {
-        case LG_VOL_DOWN:
-          for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-          {
-            codeToSend = VOL_DOWN;
-            xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-          }
-          break;
-        case LG_VOL_UP:
-          for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-          {
-            codeToSend = VOL_UP;
-            xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-          }
-          break;
-        case LG_MUTE:
-          for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-          {
-            codeToSend = MUTE;
-            xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-          }
-          break;
-        default:
-          break;
-        }
+      //   switch (data)
+      //   {
+      //   case LG_VOL_DOWN:
+      //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+      //     {
+      //       codeToSend = VOL_DOWN;
+      //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+      //     }
+      //     break;
+      //   case LG_VOL_UP:
+      //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+      //     {
+      //       codeToSend = VOL_UP;
+      //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+      //     }
+      //     break;
+      //   case LG_MUTE:
+      //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+      //     {
+      //       codeToSend = MUTE;
+      //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+      //     }
+      //     break;
+      //   default:
+      //     break;
+      //   }
     }
   }
 }
