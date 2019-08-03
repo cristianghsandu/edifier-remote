@@ -50,8 +50,7 @@ extern "C"
 #define NEC_BIT_ONE_LOW_US (2250 - NEC_BIT_ONE_HIGH_US)   // NEC protocol data bit 1: negative 1.69ms
 #define NEC_BIT_ZERO_HIGH_US 560                          // NEC protocol data bit 0: positive 0.56ms
 #define NEC_BIT_ZERO_LOW_US (1120 - NEC_BIT_ZERO_HIGH_US) // NEC protocol data bit 0: negative 0.56ms
-#define NEC_BIT_END 560                                   // NEC protocol end: positive 0.56ms
-#define NEC_BIT_MARGIN 20                                 // NEC parse margin time
+#define NEC_BIT_END_US 560                                // NEC protocol end: positive 0.56ms
 
 #define NEC_ITEM_DURATION(d) ((d & 0x7fff) * 10 / TICK_10_US) // Parse duration time from memory register duration_us
 #define NEC_DATA_ITEM_COUNT 34                                // NEC code item number: header + 32bit data + end
@@ -193,7 +192,7 @@ void IRremoteESP32::sendNEC(const uint32_t &data)
     memset((void *)items, 0, size);
 
     buildItem(items, NEC_HEADER_HIGH_US, NEC_HEADER_REPEAT_LOW_US);
-    buildItem(items + 1, NEC_BIT_END, 0);
+    buildItem(items + 1, NEC_BIT_END_US, 0);
 
     sendRMT(items);
 
@@ -274,7 +273,7 @@ void IRremoteESP32::buildZeroItem(rmt_item32_t *item)
 
 void IRremoteESP32::buildEndItem(rmt_item32_t *item)
 {
-  buildItem(item, NEC_BIT_END, 0x7fff);
+  buildItem(item, NEC_BIT_END_US, 0x7fff);
 }
 
 bool IRremoteESP32::NEC_checkRange(int duration_ticks, int expected_us)
