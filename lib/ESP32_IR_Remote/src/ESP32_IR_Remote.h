@@ -51,13 +51,16 @@ public:
   void ESP32_IRsendPIN(int sendpin);
   void ESP32_IRrecvPIN(int recvpin, int port);
   void ESP32_IRsendPIN(int sendpin, int port);
+
   void initReceive();
   void initSend();
   void stopIR();
-  int readIR(int *data, int maxBuf);
+
   void sendIR(int *data, int IRlength);
+  
   // NEC
-  int readNEC();
+  int readNEC(uint32_t* data);
+  void sendNEC(uint32_t* data);
 
 private:
   int gpionum;

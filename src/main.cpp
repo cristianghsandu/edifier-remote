@@ -42,42 +42,39 @@ void recvTaskFunc(void *params)
   for (;;)
   {
     edi_codes_t codeToSend = NONE;
-    int data[4];
 
-    int count = irrecv.readNEC();
-    // if (count == 0)
-    // {
-    //   for (int i = 0; i < 4; i++) {
-    //     Serial.println(data[i], HEX);
-    //   }
+    uint32_t data;
+    if (irrecv.readNEC(&data))
+    {
+      Serial.println(data, HEX);
 
-    //   switch (count)
-    //   {
-    //   case LG_VOL_DOWN:
-    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-    //     {
-    //       codeToSend = VOL_DOWN;
-    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-    //     }
-    //     break;
-    //   case LG_VOL_UP:
-    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-    //     {
-    //       codeToSend = VOL_UP;
-    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-    //     }
-    //     break;
-    //   case LG_MUTE:
-    //     for (size_t i = 0; i < SIGNAL_REPEAT; i++)
-    //     {
-    //       codeToSend = MUTE;
-    //       xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
-    //     }
-    //     break;
-    //   default:
-    //     break;
-    //   }
-    // }
+        switch (data)
+        {
+        case LG_VOL_DOWN:
+          for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+          {
+            codeToSend = VOL_DOWN;
+            xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+          }
+          break;
+        case LG_VOL_UP:
+          for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+          {
+            codeToSend = VOL_UP;
+            xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+          }
+          break;
+        case LG_MUTE:
+          for (size_t i = 0; i < SIGNAL_REPEAT; i++)
+          {
+            codeToSend = MUTE;
+            xQueueSendToFront(sendQueue, &codeToSend, ticksToWait);
+          }
+          break;
+        default:
+          break;
+        }
+    }
   }
 }
 

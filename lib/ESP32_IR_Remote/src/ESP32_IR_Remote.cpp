@@ -247,11 +247,6 @@ bool ESP32_IRrecv::NEC_checkRange(int duration_ticks, int expected_us)
   return (duration_us >= (uint16_t)(expected_us * (1.0 - PERCENT_TOLERANCE / 100.0))) && (duration_us <= (uint16_t)(expected_us * (1.0 + PERCENT_TOLERANCE / 100.0)));
 }
 
-// bool ESP32_IRrecv::NEC_isHeader(rmt_item32_t item)
-// {
-//   return isInRange(item, NEC_HEADER_LOW_US, NEC_HEADER_HIGH_US, NEC_BIT_MARGIN);
-// }
-
 bool ESP32_IRrecv::NEC_is0(rmt_item32_t *item)
 {
   return NEC_checkRange(item->duration0, NEC_BIT_ZERO_HIGH_US) && NEC_checkRange(item->duration1, NEC_BIT_ZERO_LOW_US);
@@ -278,10 +273,8 @@ bool ESP32_IRrecv::NEC_isRepeat(rmt_item32_t *item)
 
 int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
 {
-  Serial.println(itemCount);
   if (itemCount == NEC_REPEAT_ITEM_COUNT)
   {
-    Serial.println("Repeat");
     *data = NEC_REPEAT_DATA;
     return 0;
   }
@@ -292,7 +285,7 @@ int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
 
     if (NEC_isHeader(item))
     {
-      Serial.println("Header");
+      // Skip
     }
 
     // Skip last item which is the end marker
@@ -313,66 +306,24 @@ int ESP32_IRrecv::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   else
   {
     Serial.println("Unkown protocol");
-    return -1;
+    return 0;
   }
 }
 
-int ESP32_IRrecv::readNEC()
+int ESP32_IRrecv::readNEC(uint32_t *data)
 {
-  RingbufHandle_t rb = NULL;
-  rmt_config_t config;
-  config.channel = (rmt_channel_t)rmtport;
-
-  rmt_get_ringbuf_handle(config.channel, &rb);
-  while (rb)
+  size_t itemSize = 0;
+  rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(ringBuf, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
+  int numItems = itemSize / sizeof(rmt_item32_t);
+  if (numItems == 0)
   {
-    size_t itemSize = 0;
-    rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
-    int numItems = itemSize / sizeof(rmt_item32_t);
-    if (numItems == 0)
-    {
-      return 0;
-    }
-
-    uint32_t data;
-    auto res = decodeNEC(item, numItems, &data);
-    Serial.println(res);
-    Serial.println(data, HEX);
-
-    vRingbufferReturnItem(ringBuf, (void *)item);
-
-    return (numItems * 2 - 1);
+    return 0;
   }
 
-  return 0;
-}
+  auto res = decodeNEC(item, numItems, data);
 
-int ESP32_IRrecv::readIR(int *data, int maxBuf)
-{
-  RingbufHandle_t rb = NULL;
-  rmt_config_t config;
-  config.channel = (rmt_channel_t)rmtport;
+  // TODO: Why do we need to put it back?
+  vRingbufferReturnItem(ringBuf, (void *)item);
 
-  rmt_get_ringbuf_handle(config.channel, &rb);
-  while (rb)
-  {
-    size_t itemSize = 0;
-    rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &itemSize, (TickType_t)rmt_item32_TIMEOUT_US); //portMAX_DELAY);
-    int numItems = itemSize / sizeof(rmt_item32_t);
-    if (numItems == 0)
-    {
-      return 0;
-    }
-
-    Serial.print("Found num of Items :");
-    Serial.println(numItems * 2 - 1);
-    memset(data, 0, maxBuf);
-
-    Serial.print("Raw IR Code :");
-    decodeRAW(item, numItems, data);
-    vRingbufferReturnItem(ringBuf, (void *)item);
-    return (numItems * 2 - 1);
-  }
-
-  return 0;
+  return res;
 }
