@@ -91,21 +91,20 @@ void sendTaskFunc(void *params)
   {
     if (xQueueReceive(sendQueue, codeToSend, ticksToWait) == pdPASS)
     {
-      Serial.println(*codeToSend);
       switch (*codeToSend)
       {
       case VOL_DOWN:
         irsend.sendNEC(EDI_VOL_DOWN);
         break;
-        //   case VOL_UP:
-        //     irsend.sendNEC(EDI_VOL_UP);
-        //     break;
-        //   case MUTE:
-        //     irsend.sendNEC(EDI_MUTE);
-        //     break;
-        //   case NONE:
-        //   default:
-        //     break;
+      case VOL_UP:
+        irsend.sendNEC(EDI_VOL_UP);
+        break;
+      case MUTE:
+        irsend.sendNEC(EDI_MUTE);
+        break;
+      case NONE:
+      default:
+        break;
       }
     }
   }
