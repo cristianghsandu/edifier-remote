@@ -23,13 +23,13 @@ const uint32_t EDI_MUTE = 0x08E7827D;
 
 enum edi_codes_t
 {
+  NONE,
   VOL_UP,
   VOL_DOWN,
   MUTE,
-  NONE
 };
 
-const unsigned int SEND_REPEAT = 10;
+const unsigned int SEND_REPEAT = 4;
 
 void recvTaskFunc(void *params)
 {
@@ -81,31 +81,61 @@ void sendTaskFunc(void *params)
   irsend.setSendPin(SEND_PIN, 0);
   irsend.initSend();
 
-  const TickType_t ticksToWait = pdMS_TO_TICKS(100);
+  const TickType_t ticksToWait = pdMS_TO_TICKS(20);
+
+  long lastCommand_ticks = 0;
+  long timeBetweenRepeats = 0;
+  edi_codes_t lastCommand = NONE;
 
   int *codeToSend = new int(NONE);
+  uint32_t necData = 0;
   for (;;)
   {
     if (xQueueReceive(sendQueue, codeToSend, ticksToWait) == pdPASS)
     {
+      lastCommand_ticks = xTaskGetTickCount();
+
       switch (*codeToSend)
       {
       case VOL_DOWN:
-        irsend.sendNEC(EDI_VOL_DOWN);
+        necData = EDI_VOL_DOWN;
         break;
       case VOL_UP:
-        irsend.sendNEC(EDI_VOL_UP);
+        necData = EDI_VOL_UP;
         break;
       case MUTE:
-        irsend.sendNEC(EDI_MUTE);
+        necData = EDI_MUTE;
         break;
       case NONE:
       default:
         *codeToSend = NONE;
+        necData = 0;
         break;
       }
-    }
-  }
+
+      // A repeat happened 
+      if (timeBetweenRepeats && timeBetweenRepeats < 50)
+      {
+        necData = NEC_REPEAT_DATA;
+      }
+
+      if (necData)
+      {
+        irsend.sendNEC(necData);
+      }
+
+      if (*codeToSend != NONE && lastCommand == *codeToSend)
+      {
+        // There is a repeat
+        timeBetweenRepeats = (xTaskGetTickCount() - lastCommand_ticks) / portTICK_PERIOD_MS;
+      }
+      else
+      {
+        // No repeat
+        timeBetweenRepeats = 0;
+      }
+    } // if command queue
+  } // loop
 
   // TODO: this is unreachable
   delete codeToSend;
