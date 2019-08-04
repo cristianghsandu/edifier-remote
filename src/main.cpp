@@ -29,7 +29,7 @@ enum edi_codes_t
   MUTE,
 };
 
-const unsigned int SEND_REPEAT = 4;
+const unsigned int SEND_REPEAT = 7;
 const unsigned int REPEAT_TRESH_MS = 600;
 
 void recvTaskFunc(void *params)
@@ -60,6 +60,8 @@ void recvTaskFunc(void *params)
       case LG_MUTE:
         *codeToSend = MUTE;
         break;
+      case NEC_REPEAT_DATA:
+        continue; // jumps to for
       default:
         *codeToSend = NONE;
         break;
@@ -70,7 +72,7 @@ void recvTaskFunc(void *params)
         xQueueSendToFront(sendQueue, codeToSend, ticksToWait);
       }
     }
-  }
+  } // loop
 
   // TODO: this is unreachable
   delete codeToSend;
@@ -87,6 +89,7 @@ void sendTaskFunc(void *params)
   long lastCommand_ticks = 0;
   long timeBetweenRepeats = 0;
   int lastCommand = NONE;
+  int repeatCount = 0;
 
   int *codeToSend = new int(NONE);
   uint32_t necData = 0;
@@ -114,6 +117,7 @@ void sendTaskFunc(void *params)
         // There is a repeat
         Serial.print("Repeat: ");
         timeBetweenRepeats = (xTaskGetTickCount() - lastCommand_ticks) / portTICK_PERIOD_MS;
+        repeatCount = 0;
         Serial.println(timeBetweenRepeats);
       }
       else
@@ -145,8 +149,15 @@ void sendTaskFunc(void *params)
       auto currentTime = xTaskGetTickCount() / portTICK_PERIOD_MS;
       if (currentTime - (lastCommand_ticks / portTICK_PERIOD_MS) < REPEAT_TRESH_MS)
       {
-        irsend.sendNEC(NEC_REPEAT_DATA);
-      } else {
+        if (repeatCount <= SEND_REPEAT)
+        {
+          irsend.sendNEC(NEC_REPEAT_DATA);
+          repeatCount++;
+        }
+      }
+      else
+      {
+        repeatCount = 0;
         timeBetweenRepeats = 0;
       }
     }
