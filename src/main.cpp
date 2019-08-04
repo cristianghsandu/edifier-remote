@@ -30,6 +30,7 @@ enum edi_codes_t
 };
 
 const unsigned int SEND_REPEAT = 4;
+const unsigned int REPEAT_TRESH_MS = 600;
 
 void recvTaskFunc(void *params)
 {
@@ -111,6 +112,7 @@ void sendTaskFunc(void *params)
       if (*codeToSend != NONE && lastCommand == *codeToSend)
       {
         // There is a repeat
+        Serial.print("Repeat: ");
         timeBetweenRepeats = (xTaskGetTickCount() - lastCommand_ticks) / portTICK_PERIOD_MS;
         Serial.println(timeBetweenRepeats);
       }
@@ -138,9 +140,15 @@ void sendTaskFunc(void *params)
     } // if command queue
 
     // A repeat happened
-    if (timeBetweenRepeats && timeBetweenRepeats < 600)
+    if (timeBetweenRepeats && timeBetweenRepeats < REPEAT_TRESH_MS)
     {
-      irsend.sendNEC(NEC_REPEAT_DATA);
+      auto currentTime = xTaskGetTickCount() / portTICK_PERIOD_MS;
+      if (currentTime - (lastCommand_ticks / portTICK_PERIOD_MS) < REPEAT_TRESH_MS)
+      {
+        irsend.sendNEC(NEC_REPEAT_DATA);
+      } else {
+        timeBetweenRepeats = 0;
+      }
     }
 
   } // loop
