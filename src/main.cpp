@@ -85,7 +85,7 @@ void sendTaskFunc(void *params)
 
   long lastCommand_ticks = 0;
   long timeBetweenRepeats = 0;
-  edi_codes_t lastCommand = NONE;
+  int lastCommand = NONE;
 
   int *codeToSend = new int(NONE);
   uint32_t necData = 0;
@@ -93,8 +93,6 @@ void sendTaskFunc(void *params)
   {
     if (xQueueReceive(sendQueue, codeToSend, ticksToWait) == pdPASS)
     {
-      lastCommand_ticks = xTaskGetTickCount();
-
       switch (*codeToSend)
       {
       case VOL_DOWN:
@@ -106,35 +104,45 @@ void sendTaskFunc(void *params)
       case MUTE:
         necData = EDI_MUTE;
         break;
-      case NONE:
       default:
-        *codeToSend = NONE;
-        necData = 0;
         break;
-      }
-
-      // A repeat happened 
-      if (timeBetweenRepeats && timeBetweenRepeats < 50)
-      {
-        necData = NEC_REPEAT_DATA;
-      }
-
-      if (necData)
-      {
-        irsend.sendNEC(necData);
       }
 
       if (*codeToSend != NONE && lastCommand == *codeToSend)
       {
         // There is a repeat
         timeBetweenRepeats = (xTaskGetTickCount() - lastCommand_ticks) / portTICK_PERIOD_MS;
+        Serial.println(timeBetweenRepeats);
       }
       else
       {
         // No repeat
         timeBetweenRepeats = 0;
       }
+
+      // Get time
+      lastCommand_ticks = xTaskGetTickCount();
+
+      // Save last command
+      lastCommand = *codeToSend;
+
+      // Send IR
+      if (necData)
+      {
+        irsend.sendNEC(necData);
+      }
+
+      // Clear used data
+      *codeToSend = NONE;
+      necData = 0;
     } // if command queue
+
+    // A repeat happened
+    if (timeBetweenRepeats && timeBetweenRepeats < 600)
+    {
+      irsend.sendNEC(NEC_REPEAT_DATA);
+    }
+
   } // loop
 
   // TODO: this is unreachable
