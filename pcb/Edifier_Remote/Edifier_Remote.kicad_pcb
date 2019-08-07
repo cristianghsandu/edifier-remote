@@ -3,7 +3,7 @@
   (general
     (thickness 1.6)
     (drawings 0)
-    (tracks 0)
+    (tracks 7)
     (zones 0)
     (modules 4)
     (nets 40)
@@ -60,7 +60,7 @@
     (pad_to_mask_clearance 0.051)
     (solder_mask_min_width 0.25)
     (aux_axis_origin 0 0)
-    (visible_elements FFFFFF7F)
+    (visible_elements 7FFFFFFF)
     (pcbplotparams
       (layerselection 0x010fc_ffffffff)
       (usegerberextensions false)
@@ -180,7 +180,7 @@
   )
 
   (module Package_TO_SOT_THT:TO-220-3_Vertical (layer F.Cu) (tedit 5AC8BA0D) (tstamp 5D48B016)
-    (at 126.746 71.12)
+    (at 117.6655 116.1415)
     (descr "TO-220-3, Vertical, RM 2.54mm, see https://www.vishay.com/docs/66542/to-220-1.pdf")
     (tags "TO-220-3 Vertical RM 2.54mm")
     (path /5D48B44F)
@@ -224,8 +224,8 @@
     )
   )
 
-  (module OptoDevice:Vishay_MOLD-3Pin (layer F.Cu) (tedit 5B888673) (tstamp 5D48AFFC)
-    (at 106.299 68.834)
+  (module OptoDevice:Vishay_MOLD-3Pin (layer F.Cu) (tedit 5B888673) (tstamp 5D4B1B28)
+    (at 106.9975 133.7945)
     (descr "IR Receiver Vishay TSOP-xxxx, MOLD package, see https://www.vishay.com/docs/82669/tsop32s40f.pdf")
     (tags "IR Receiver Vishay TSOP-xxxx MOLD")
     (path /5D48EEA8)
@@ -269,10 +269,10 @@
   (module ESP32-DEVKITC-32D:MODULE_ESP32-DEVKITC-32D (layer F.Cu) (tedit 0) (tstamp 5D48AFE5)
     (at 119.797 103.398)
     (path /5D48620E)
-    (fp_text reference ESP32 (at -11.4644 -28.446) (layer F.SilkS)
+    (fp_text reference ESP32 (at -0.8615 -23.007) (layer F.SilkS)
       (effects (font (size 1.00039 1.00039) (thickness 0.05)))
     )
-    (fp_text value ESP32-DEVKITC-32D (at -10.8363 28.2945) (layer F.SilkS)
+    (fp_text value ESP32-DEVKITC-32D (at 0.218 -10.7515) (layer F.SilkS)
       (effects (font (size 1.00105 1.00105) (thickness 0.05)))
     )
     (fp_circle (center -14.6 -19.9) (end -14.46 -19.9) (layer Eco2.User) (width 0.28))
@@ -368,7 +368,7 @@
   )
 
   (module LED_THT:LED_D5.0mm (layer F.Cu) (tedit 5995936A) (tstamp 5D48AFAD)
-    (at 132.6515 135.255 180)
+    (at 132.0165 135.001 180)
     (descr "LED, diameter 5.0mm, 2 pins, http://cdn-reichelt.de/documents/datenblatt/A500/LL-504BC2E-009.pdf")
     (tags "LED diameter 5.0mm 2 pins")
     (path /5D48E449)
@@ -402,5 +402,13 @@
       (rotate (xyz 0 0 0))
     )
   )
+
+  (segment (start 120.2055 117.3915) (end 120.2055 116.1415) (width 0.25) (layer F.Cu) (net 2))
+  (segment (start 120.2055 118.701902) (end 120.2055 117.3915) (width 0.25) (layer F.Cu) (net 2))
+  (segment (start 132.0165 130.512902) (end 120.2055 118.701902) (width 0.25) (layer F.Cu) (net 2))
+  (segment (start 132.0165 135.001) (end 132.0165 130.512902) (width 0.25) (layer F.Cu) (net 2))
+  (segment (start 108.127 83.638) (end 107.097 83.638) (width 0.25) (layer F.Cu) (net 39))
+  (segment (start 112.0775 87.5885) (end 108.127 83.638) (width 0.25) (layer F.Cu) (net 39))
+  (segment (start 112.0775 133.7945) (end 112.0775 87.5885) (width 0.25) (layer F.Cu) (net 39))
 
 )
