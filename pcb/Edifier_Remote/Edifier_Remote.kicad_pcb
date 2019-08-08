@@ -240,7 +240,7 @@
   (module ESP32:ESP32_DevKit_36PIN (layer F.Cu) (tedit 5D4C4E04) (tstamp 5D4CEF31)
     (at 114.907 80.097)
     (path /5D4C4D02)
-    (fp_text reference U1 (at 2.949 -9.231) (layer F.SilkS)
+    (fp_text reference ESP32 (at 2.949 -9.231) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))
     )
     (fp_text value ESP32_DevKit (at 2.54 40.64) (layer F.Fab)
