@@ -1,3 +1,4 @@
 (fp_lib_table
   (lib (name ESP32-DEVKITC-32D)(type Legacy)(uri ${KIPRJMOD}/ESP32_DevKitC/ESP32-DEVKITC-32D.mod)(options "")(descr ""))
+  (lib (name Logo)(type KiCad)(uri ${KIPRJMOD}/Logo.pretty)(options "")(descr ""))
 )
