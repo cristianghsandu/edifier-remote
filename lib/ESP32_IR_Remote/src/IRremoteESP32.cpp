@@ -337,7 +337,9 @@ int IRremoteESP32::decodeNEC(rmt_item32_t *item, int itemCount, uint32_t *data)
   }
   else
   {
+#if DEBUG
     Serial.println("Unkown protocol");
+#endif
     return 0;
   }
 }

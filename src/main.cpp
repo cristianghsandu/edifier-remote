@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include <IRremoteESP32.h>
 
+#define DEBUG 0
+
 TaskHandle_t senderTask;
 TaskHandle_t receiverTask;
 
@@ -47,8 +49,9 @@ void recvTaskFunc(void *params)
     uint32_t data;
     if (irrecv.readNEC(&data))
     {
-      Serial.println(data, HEX);
-
+#if DEBUG
+      Serial.print(data, HEX);
+#endif
       switch (data)
       {
       case LG_VOL_DOWN:
@@ -115,10 +118,14 @@ void sendTaskFunc(void *params)
       if (*codeToSend != NONE && lastCommand == *codeToSend)
       {
         // There is a repeat
+#if DEBUG
         Serial.print("Repeat: ");
+#endif
         timeBetweenRepeats = (xTaskGetTickCount() - lastCommand_ticks) / portTICK_PERIOD_MS;
         repeatCount = 0;
+#if DEBUG
         Serial.println(timeBetweenRepeats);
+#endif
       }
       else
       {
